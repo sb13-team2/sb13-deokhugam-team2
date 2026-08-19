@@ -27,6 +27,11 @@ public enum ErrorCode {
   USER_NOT_FOUND(HttpStatus.NOT_FOUND,
           "사용자를 찾을 수 없습니다."
   ),
+  // review 도메인 예외 추가
+  DUPLICATE_REVIEW(
+          HttpStatus.CONFLICT,
+          "이미 작성된 리뷰가 존재합니다."
+  ),
 
   INTERNAL_SERVER_ERROR(
       HttpStatus.INTERNAL_SERVER_ERROR,
