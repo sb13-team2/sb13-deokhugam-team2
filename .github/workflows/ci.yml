@@ -18,6 +18,26 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: deokhugam
+          POSTGRES_USER: deokhugam_user
+          POSTGRES_PASSWORD: deokhugam1234
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U deokhugam_user -d deokhugam"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/deokhugam
+      DB_USERNAME: deokhugam_user
+      DB_PASSWORD: deokhugam1234
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
