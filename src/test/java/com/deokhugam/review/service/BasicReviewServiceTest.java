@@ -196,14 +196,25 @@ class BasicReviewServiceTest {
     }
 
     @Test
-    void 작성자가_자신의_리뷰를_수정한다() {
+    void 작성자가_자신의_리뷰를_수정하면_갱신된_시간을_반환한다() {
         UUID reviewId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID bookId = UUID.randomUUID();
 
+        LocalDateTime updatedAtBefore =
+                LocalDateTime.now().minusHours(1);
+        LocalDateTime updatedAtAfter =
+                LocalDateTime.now();
+
         User user = createUser(userId);
         Book book = createBook(bookId);
         Review review = createReview(reviewId, user, book);
+
+        ReflectionTestUtils.setField(
+                review,
+                "updatedAt",
+                updatedAtBefore
+        );
 
         ReviewUpdateRequest request = new ReviewUpdateRequest(
                 "수정한 리뷰 내용입니다.",
@@ -213,6 +224,17 @@ class BasicReviewServiceTest {
         given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
                 .willReturn(Optional.of(review));
 
+        given(reviewRepository.saveAndFlush(review))
+                .willAnswer(invocation -> {
+                    Review savedReview = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(
+                            savedReview,
+                            "updatedAt",
+                            updatedAtAfter
+                    );
+                    return savedReview;
+                });
+
         ReviewDetailResponse response = reviewService.update(
                 reviewId,
                 userId,
@@ -220,10 +242,13 @@ class BasicReviewServiceTest {
         );
 
         assertThat(response.id()).isEqualTo(reviewId);
-        assertThat(response.content()).isEqualTo("수정한 리뷰 내용입니다.");
+        assertThat(response.content())
+                .isEqualTo("수정한 리뷰 내용입니다.");
         assertThat(response.rating()).isEqualTo(4);
-        assertThat(review.getContent()).isEqualTo("수정한 리뷰 내용입니다.");
-        assertThat(review.getRating()).isEqualTo(4);
+        assertThat(response.updatedAt()).isEqualTo(updatedAtAfter);
+        assertThat(response.updatedAt()).isNotEqualTo(updatedAtBefore);
+
+        verify(reviewRepository).saveAndFlush(review);
     }
 
     @Test
