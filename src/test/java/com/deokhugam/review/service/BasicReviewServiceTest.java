@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import com.deokhugam.book.entity.Book;
 import com.deokhugam.book.exception.BookNotFoundException;
 import com.deokhugam.book.repository.BookRepository;
+import com.deokhugam.global.storage.Storage;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
@@ -43,6 +44,9 @@ class BasicReviewServiceTest {
 
     @Mock
     private BookRepository bookRepository;
+
+    @Mock
+    private Storage storage;
 
     @InjectMocks
     private BasicReviewService reviewService;
@@ -298,6 +302,75 @@ class BasicReviewServiceTest {
 
         assertThat(review.getContent()).isEqualTo("좋은 책입니다.");
         assertThat(review.getRating()).isEqualTo(5);
+    }
+
+    @Test
+    void 리뷰_등록_응답은_접근_가능한_썸네일_URL을_반환한다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+        LocalDateTime createdAt = LocalDateTime.now();
+
+        String thumbnailPath = "book-thumbnails/test.jpg";
+        String accessibleThumbnailUrl =
+                "https://example.com/book-thumbnails/test.jpg";
+
+        ReviewCreateRequest request = new ReviewCreateRequest(
+                bookId,
+                userId,
+                "좋은 책입니다.",
+                5
+        );
+
+        User user = createUser(userId);
+        Book book = createBook(bookId);
+        book.updateThumbnailUrl(thumbnailPath);
+
+        given(
+                reviewRepository.existsByUserIdAndBookIdAndDeletedAtIsNull(
+                        userId,
+                        bookId
+                )
+        ).willReturn(false);
+
+        given(userRepository.findByIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user));
+
+        given(bookRepository.findByIdAndDeletedAtIsNull(bookId))
+                .willReturn(Optional.of(book));
+
+        given(storage.getUrl(thumbnailPath))
+                .willReturn(accessibleThumbnailUrl);
+
+        given(reviewRepository.save(any(Review.class)))
+                .willAnswer(invocation -> {
+                    Review review = invocation.getArgument(0);
+
+                    ReflectionTestUtils.setField(
+                            review,
+                            "id",
+                            reviewId
+                    );
+                    ReflectionTestUtils.setField(
+                            review,
+                            "createdAt",
+                            createdAt
+                    );
+                    ReflectionTestUtils.setField(
+                            review,
+                            "updatedAt",
+                            createdAt
+                    );
+
+                    return review;
+                });
+
+        ReviewDetailResponse response = reviewService.create(request);
+
+        assertThat(response.bookThumbnailUrl())
+                .isEqualTo(accessibleThumbnailUrl);
+
+        verify(storage).getUrl(thumbnailPath);
     }
 
     private Review createReview(
