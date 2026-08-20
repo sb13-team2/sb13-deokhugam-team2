@@ -5,8 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,6 +14,7 @@ import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
 import com.deokhugam.review.exception.DuplicateReviewException;
+import com.deokhugam.review.exception.ReviewNotFoundException;
 import com.deokhugam.review.service.ReviewService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
@@ -207,5 +207,84 @@ class ReviewControllerTest {
                 any(UUID.class),
                 any(ReviewUpdateRequest.class)
         );
+    }
+
+    @Test
+    void 리뷰_ID로_상세_정보를_조회하면_200과_리뷰를_반환한다()
+            throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
+
+        ReviewDetailResponse response = new ReviewDetailResponse(
+                reviewId,
+                bookId,
+                "테스트 도서",
+                "https://example.com/thumbnail.jpg",
+                authorId,
+                "작성자",
+                "좋은 책입니다.",
+                5,
+                3,
+                2,
+                true,
+                now,
+                now
+        );
+
+        given(reviewService.findById(
+                eq(reviewId),
+                eq(requesterId)
+        )).willReturn(response);
+
+        mockMvc.perform(get("/api/reviews/{reviewId}", reviewId)
+                        .header(
+                                REQUEST_USER_ID_HEADER,
+                                requesterId
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id")
+                        .value(reviewId.toString()))
+                .andExpect(jsonPath("$.bookId")
+                        .value(bookId.toString()))
+                .andExpect(jsonPath("$.bookTitle")
+                        .value("테스트 도서"))
+                .andExpect(jsonPath("$.bookThumbnailUrl")
+                        .value("https://example.com/thumbnail.jpg"))
+                .andExpect(jsonPath("$.userId")
+                        .value(authorId.toString()))
+                .andExpect(jsonPath("$.userNickname")
+                        .value("작성자"))
+                .andExpect(jsonPath("$.content")
+                        .value("좋은 책입니다."))
+                .andExpect(jsonPath("$.rating").value(5))
+                .andExpect(jsonPath("$.likeCount").value(3))
+                .andExpect(jsonPath("$.commentCount").value(2))
+                .andExpect(jsonPath("$.likedByMe").value(true));
+    }
+
+    @Test
+    void 활성_리뷰가_존재하지_않으면_상세_조회시_404를_반환한다()
+            throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        given(reviewService.findById(
+                eq(reviewId),
+                eq(requesterId)
+        )).willThrow(new ReviewNotFoundException(reviewId));
+
+        mockMvc.perform(get("/api/reviews/{reviewId}", reviewId)
+                        .header(
+                                REQUEST_USER_ID_HEADER,
+                                requesterId
+                        ))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code")
+                        .value("REVIEW_NOT_FOUND"))
+                .andExpect(jsonPath("$.details.reviewId")
+                        .value(reviewId.toString()));
     }
 }
