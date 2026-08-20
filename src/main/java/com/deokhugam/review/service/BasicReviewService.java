@@ -4,6 +4,7 @@ import com.deokhugam.book.entity.Book;
 import com.deokhugam.book.exception.BookNotFoundException;
 import com.deokhugam.book.repository.BookRepository;
 import com.deokhugam.global.exception.ErrorCode;
+import com.deokhugam.global.storage.Storage;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
@@ -29,6 +30,7 @@ public class BasicReviewService implements ReviewService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
+    private final Storage storage;
 
     @Override
     @Transactional
@@ -117,11 +119,17 @@ public class BasicReviewService implements ReviewService {
     }
 
     private ReviewDetailResponse toResponse(Review review) {
+        String thumbnailUrl = review.getBook().getThumbnailUrl();
+
+        if (thumbnailUrl != null && !thumbnailUrl.isBlank()) {
+            thumbnailUrl = storage.getUrl(thumbnailUrl);
+        }
+
         return new ReviewDetailResponse(
                 review.getId(),
                 review.getBook().getId(),
                 review.getBook().getTitle(),
-                review.getBook().getThumbnailUrl(),
+                thumbnailUrl,
                 review.getUser().getId(),
                 review.getUser().getNickname(),
                 review.getContent(),
