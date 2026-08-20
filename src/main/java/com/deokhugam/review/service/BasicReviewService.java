@@ -83,7 +83,9 @@ public class BasicReviewService implements ReviewService {
                 request.rating()
         );
 
-        return toResponse(review);
+        Review updatedReview = reviewRepository.saveAndFlush(review);
+
+        return toResponse(updatedReview);
     }
 
     private void validateDuplicateReview(
