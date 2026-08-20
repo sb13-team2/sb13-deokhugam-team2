@@ -80,4 +80,9 @@ public class Review extends SoftDeleteEntity {
     ) {
         return new Review(user, book, content, rating);
     }
+
+    public void update(String content, Integer rating) {
+        this.content = content;
+        this.rating = rating;
+    }
 }
