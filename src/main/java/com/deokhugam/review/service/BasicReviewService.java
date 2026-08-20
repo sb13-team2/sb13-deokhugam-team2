@@ -109,7 +109,13 @@ public class BasicReviewService implements ReviewService {
 
         Review updatedReview = reviewRepository.saveAndFlush(review);
 
-        return toResponse(updatedReview, false);
+        boolean likedByMe =
+                reviewLikeRepository.existsByReviewIdAndUserId(
+                        reviewId,
+                        requesterId
+                );
+
+        return toResponse(updatedReview, likedByMe);
     }
 
     private void validateDuplicateReview(
