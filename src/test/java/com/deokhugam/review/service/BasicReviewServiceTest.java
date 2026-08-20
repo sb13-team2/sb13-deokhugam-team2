@@ -457,6 +457,41 @@ class BasicReviewServiceTest {
                 );
     }
 
+    @Test
+    void 좋아요한_사용자가_리뷰를_수정하면_likedByMe는_true이다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User user = createUser(userId);
+        Book book = createBook(bookId);
+        Review review = createReview(reviewId, user, book);
+
+        ReviewUpdateRequest request = new ReviewUpdateRequest(
+                "수정한 리뷰 내용입니다.",
+                4
+        );
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        given(reviewRepository.saveAndFlush(review))
+                .willReturn(review);
+
+        given(reviewLikeRepository.existsByReviewIdAndUserId(
+                reviewId,
+                userId
+        )).willReturn(true);
+
+        ReviewDetailResponse response = reviewService.update(
+                reviewId,
+                userId,
+                request
+        );
+
+        assertThat(response.likedByMe()).isTrue();
+    }
+
     private Review createReview(
             UUID reviewId,
             User user,
