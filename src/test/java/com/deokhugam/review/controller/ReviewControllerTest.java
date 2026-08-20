@@ -336,6 +336,8 @@ class ReviewControllerTest {
                 .andExpect(jsonPath("$.details.reviewId")
                         .value(reviewId.toString()))
                 .andExpect(jsonPath("$.details.requesterId")
-                        .value(requesterId.toString()));
+                        .value(requesterId.toString()))
+                .andExpect(jsonPath("$.message")
+                        .value("리뷰에 대한 권한이 없습니다."));
     }
 }
