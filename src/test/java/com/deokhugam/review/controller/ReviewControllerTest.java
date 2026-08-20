@@ -3,6 +3,7 @@ package com.deokhugam.review.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -14,6 +15,7 @@ import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
 import com.deokhugam.review.exception.DuplicateReviewException;
+import com.deokhugam.review.exception.ReviewAccessDeniedException;
 import com.deokhugam.review.exception.ReviewNotFoundException;
 import com.deokhugam.review.service.ReviewService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -286,5 +288,54 @@ class ReviewControllerTest {
                         .value("REVIEW_NOT_FOUND"))
                 .andExpect(jsonPath("$.details.reviewId")
                         .value(reviewId.toString()));
+    }
+
+    @Test
+    void 본인의_리뷰를_논리_삭제하면_204를_반환한다()
+            throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/reviews/{reviewId}", reviewId)
+                        .header(
+                                REQUEST_USER_ID_HEADER,
+                                requesterId
+                        ))
+                .andExpect(status().isNoContent());
+
+        verify(reviewService).softDelete(
+                reviewId,
+                requesterId
+        );
+    }
+
+    @Test
+    void 다른_사용자의_리뷰를_논리_삭제하면_403을_반환한다()
+            throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        willThrow(
+                new ReviewAccessDeniedException(
+                        reviewId,
+                        requesterId
+                )
+        ).given(reviewService).softDelete(
+                reviewId,
+                requesterId
+        );
+
+        mockMvc.perform(delete("/api/reviews/{reviewId}", reviewId)
+                        .header(
+                                REQUEST_USER_ID_HEADER,
+                                requesterId
+                        ))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code")
+                        .value("REVIEW_ACCESS_DENIED"))
+                .andExpect(jsonPath("$.details.reviewId")
+                        .value(reviewId.toString()))
+                .andExpect(jsonPath("$.details.requesterId")
+                        .value(requesterId.toString()));
     }
 }
