@@ -118,6 +118,23 @@ public class BasicReviewService implements ReviewService {
         return toResponse(updatedReview, likedByMe);
     }
 
+    @Override
+    @Transactional
+    public void softDelete(
+            UUID reviewId,
+            UUID requesterId
+    ) {
+        Review review = reviewRepository
+                .findByIdAndDeletedAtIsNull(reviewId)
+                .orElseThrow(() ->
+                        new ReviewNotFoundException(reviewId)
+                );
+
+        validateReviewOwner(review, requesterId);
+
+        review.softDelete();
+    }
+
     private void validateDuplicateReview(
             UUID userId,
             UUID bookId

@@ -19,4 +19,9 @@ public interface ReviewService {
             UUID requesterId,
             ReviewUpdateRequest request
     );
+
+    void softDelete(
+            UUID reviewId,
+            UUID requesterId
+    );
 }
