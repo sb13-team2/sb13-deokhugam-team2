@@ -11,9 +11,12 @@ import com.deokhugam.book.entity.Book;
 import com.deokhugam.book.exception.BookNotFoundException;
 import com.deokhugam.book.repository.BookRepository;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
+import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
 import com.deokhugam.review.entity.Review;
 import com.deokhugam.review.exception.DuplicateReviewException;
+import com.deokhugam.review.exception.ReviewAccessDeniedException;
+import com.deokhugam.review.exception.ReviewNotFoundException;
 import com.deokhugam.review.repository.ReviewRepository;
 import com.deokhugam.user.entity.User;
 import com.deokhugam.user.exception.UserException;
@@ -190,6 +193,111 @@ class BasicReviewServiceTest {
                 .isInstanceOf(BookNotFoundException.class);
 
         verify(reviewRepository, never()).save(any(Review.class));
+    }
+
+    @Test
+    void 작성자가_자신의_리뷰를_수정한다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User user = createUser(userId);
+        Book book = createBook(bookId);
+        Review review = createReview(reviewId, user, book);
+
+        ReviewUpdateRequest request = new ReviewUpdateRequest(
+                "수정한 리뷰 내용입니다.",
+                4
+        );
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        ReviewDetailResponse response = reviewService.update(
+                reviewId,
+                userId,
+                request
+        );
+
+        assertThat(response.id()).isEqualTo(reviewId);
+        assertThat(response.content()).isEqualTo("수정한 리뷰 내용입니다.");
+        assertThat(response.rating()).isEqualTo(4);
+        assertThat(review.getContent()).isEqualTo("수정한 리뷰 내용입니다.");
+        assertThat(review.getRating()).isEqualTo(4);
+    }
+
+    @Test
+    void 활성_리뷰가_존재하지_않으면_수정에_실패한다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        ReviewUpdateRequest request = new ReviewUpdateRequest(
+                "수정한 리뷰 내용입니다.",
+                4
+        );
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reviewService.update(
+                reviewId,
+                userId,
+                request
+        )).isInstanceOf(ReviewNotFoundException.class);
+    }
+
+    @Test
+    void 다른_사용자의_리뷰는_수정할_수_없다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User author = createUser(authorId);
+        Book book = createBook(bookId);
+        Review review = createReview(reviewId, author, book);
+
+        ReviewUpdateRequest request = new ReviewUpdateRequest(
+                "수정한 리뷰 내용입니다.",
+                4
+        );
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        assertThatThrownBy(() -> reviewService.update(
+                reviewId,
+                requesterId,
+                request
+        )).isInstanceOf(ReviewAccessDeniedException.class);
+
+        assertThat(review.getContent()).isEqualTo("좋은 책입니다.");
+        assertThat(review.getRating()).isEqualTo(5);
+    }
+
+    private Review createReview(
+            UUID reviewId,
+            User user,
+            Book book
+    ) {
+        Review review = Review.create(
+                user,
+                book,
+                "좋은 책입니다.",
+                5
+        );
+        ReflectionTestUtils.setField(review, "id", reviewId);
+        ReflectionTestUtils.setField(
+                review,
+                "createdAt",
+                LocalDateTime.now()
+        );
+        ReflectionTestUtils.setField(
+                review,
+                "updatedAt",
+                LocalDateTime.now()
+        );
+        return review;
     }
 
     private User createUser(UUID userId) {
