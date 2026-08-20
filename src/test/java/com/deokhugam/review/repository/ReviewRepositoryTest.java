@@ -9,6 +9,7 @@ import com.deokhugam.review.entity.Review;
 import com.deokhugam.user.entity.User;
 import com.deokhugam.user.repository.UserRepository;
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,6 +72,49 @@ class ReviewRepositoryTest {
                 );
 
         assertThat(exists).isFalse();
+    }
+
+    @Test
+    void ID로_활성_리뷰를_조회한다() {
+        User user = userRepository.save(createUser());
+        Book book = bookRepository.save(createBook());
+
+        Review review = Review.create(
+                user,
+                book,
+                "좋은 책입니다.",
+                5
+        );
+        Review savedReview = reviewRepository.saveAndFlush(review);
+
+        Optional<Review> result =
+                reviewRepository.findByIdAndDeletedAtIsNull(
+                        savedReview.getId()
+                );
+
+        assertThat(result).contains(savedReview);
+    }
+
+    @Test
+    void 논리_삭제된_리뷰는_ID로_활성_조회할_수_없다() {
+        User user = userRepository.save(createUser());
+        Book book = bookRepository.save(createBook());
+
+        Review review = Review.create(
+                user,
+                book,
+                "좋은 책입니다.",
+                5
+        );
+        review.softDelete();
+        Review savedReview = reviewRepository.saveAndFlush(review);
+
+        Optional<Review> result =
+                reviewRepository.findByIdAndDeletedAtIsNull(
+                        savedReview.getId()
+                );
+
+        assertThat(result).isEmpty();
     }
 
     private User createUser() {
