@@ -492,6 +492,63 @@ class BasicReviewServiceTest {
         assertThat(response.likedByMe()).isTrue();
     }
 
+    @Test
+    void 작성자가_자신의_리뷰를_논리_삭제한다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User user = createUser(userId);
+        Book book = createBook(bookId);
+        Review review = createReview(reviewId, user, book);
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        reviewService.softDelete(
+                reviewId,
+                userId
+        );
+
+        assertThat(review.isDeleted()).isTrue();
+    }
+
+    @Test
+    void 활성_리뷰가_존재하지_않으면_논리_삭제에_실패한다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reviewService.softDelete(
+                reviewId,
+                requesterId
+        )).isInstanceOf(ReviewNotFoundException.class);
+    }
+
+    @Test
+    void 다른_사용자의_리뷰는_논리_삭제할_수_없다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User author = createUser(authorId);
+        Book book = createBook(bookId);
+        Review review = createReview(reviewId, author, book);
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        assertThatThrownBy(() -> reviewService.softDelete(
+                reviewId,
+                requesterId
+        )).isInstanceOf(ReviewAccessDeniedException.class);
+
+        assertThat(review.isDeleted()).isFalse();
+    }
+
     private Review createReview(
             UUID reviewId,
             User user,
