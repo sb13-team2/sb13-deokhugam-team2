@@ -18,6 +18,7 @@ import com.deokhugam.review.entity.Review;
 import com.deokhugam.review.exception.DuplicateReviewException;
 import com.deokhugam.review.exception.ReviewAccessDeniedException;
 import com.deokhugam.review.exception.ReviewNotFoundException;
+import com.deokhugam.review.repository.ReviewLikeRepository;
 import com.deokhugam.review.repository.ReviewRepository;
 import com.deokhugam.user.entity.User;
 import com.deokhugam.user.exception.UserException;
@@ -38,6 +39,9 @@ class BasicReviewServiceTest {
 
     @Mock
     private ReviewRepository reviewRepository;
+
+    @Mock
+    private ReviewLikeRepository reviewLikeRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -371,6 +375,86 @@ class BasicReviewServiceTest {
                 .isEqualTo(accessibleThumbnailUrl);
 
         verify(storage).getUrl(thumbnailPath);
+    }
+
+    @Test
+    void 좋아요한_사용자가_리뷰를_상세_조회하면_likedByMe는_true이다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User author = createUser(authorId);
+        Book book = createBook(bookId);
+        Review review = createReview(reviewId, author, book);
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        given(reviewLikeRepository.existsByReviewIdAndUserId(
+                reviewId,
+                requesterId
+        )).willReturn(true);
+
+        ReviewDetailResponse response = reviewService.findById(
+                reviewId,
+                requesterId
+        );
+
+        assertThat(response.id()).isEqualTo(reviewId);
+        assertThat(response.bookId()).isEqualTo(bookId);
+        assertThat(response.userId()).isEqualTo(authorId);
+        assertThat(response.content()).isEqualTo("좋은 책입니다.");
+        assertThat(response.rating()).isEqualTo(5);
+        assertThat(response.likedByMe()).isTrue();
+    }
+
+    @Test
+    void 좋아요하지_않은_사용자가_리뷰를_상세_조회하면_likedByMe는_false이다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User author = createUser(authorId);
+        Book book = createBook(bookId);
+        Review review = createReview(reviewId, author, book);
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        given(reviewLikeRepository.existsByReviewIdAndUserId(
+                reviewId,
+                requesterId
+        )).willReturn(false);
+
+        ReviewDetailResponse response = reviewService.findById(
+                reviewId,
+                requesterId
+        );
+
+        assertThat(response.id()).isEqualTo(reviewId);
+        assertThat(response.likedByMe()).isFalse();
+    }
+
+    @Test
+    void 활성_리뷰가_존재하지_않으면_상세_조회에_실패한다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reviewService.findById(
+                reviewId,
+                requesterId
+        )).isInstanceOf(ReviewNotFoundException.class);
+
+        verify(reviewLikeRepository, never())
+                .existsByReviewIdAndUserId(
+                        any(UUID.class),
+                        any(UUID.class)
+                );
     }
 
     private Review createReview(
