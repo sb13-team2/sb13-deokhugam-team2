@@ -59,4 +59,17 @@ public class ReviewController {
 
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<Void> softDelete(
+            @PathVariable UUID reviewId,
+            @RequestHeader(REQUEST_USER_ID_HEADER) UUID requesterId
+    ) {
+        reviewService.softDelete(
+                reviewId,
+                requesterId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
 }
