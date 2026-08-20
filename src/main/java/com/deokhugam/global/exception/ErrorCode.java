@@ -33,6 +33,16 @@ public enum ErrorCode {
           "이미 작성된 리뷰가 존재합니다."
   ),
 
+  REVIEW_NOT_FOUND(
+          HttpStatus.NOT_FOUND,
+          "리뷰를 찾을 수 없습니다."
+  ),
+
+  REVIEW_ACCESS_DENIED(
+          HttpStatus.FORBIDDEN,
+          "리뷰를 수정할 권한이 없습니다."
+  ),
+
   INTERNAL_SERVER_ERROR(
       HttpStatus.INTERNAL_SERVER_ERROR,
       "서버 내부 오류가 발생했습니다."

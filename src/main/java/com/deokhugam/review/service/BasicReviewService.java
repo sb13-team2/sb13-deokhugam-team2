@@ -5,16 +5,18 @@ import com.deokhugam.book.exception.BookNotFoundException;
 import com.deokhugam.book.repository.BookRepository;
 import com.deokhugam.global.exception.ErrorCode;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
+import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
 import com.deokhugam.review.entity.Review;
 import com.deokhugam.review.exception.DuplicateReviewException;
+import com.deokhugam.review.exception.ReviewAccessDeniedException;
+import com.deokhugam.review.exception.ReviewNotFoundException;
 import com.deokhugam.review.repository.ReviewRepository;
 import com.deokhugam.user.entity.User;
 import com.deokhugam.user.exception.UserException;
 import com.deokhugam.user.repository.UserRepository;
 import java.util.Map;
 import java.util.UUID;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +63,29 @@ public class BasicReviewService implements ReviewService {
         return toResponse(savedReview);
     }
 
+    @Override
+    @Transactional
+    public ReviewDetailResponse update(
+            UUID reviewId,
+            UUID requesterId,
+            ReviewUpdateRequest request
+    ) {
+        Review review = reviewRepository
+                .findByIdAndDeletedAtIsNull(reviewId)
+                .orElseThrow(() ->
+                        new ReviewNotFoundException(reviewId)
+                );
+
+        validateReviewOwner(review, requesterId);
+
+        review.update(
+                request.content(),
+                request.rating()
+        );
+
+        return toResponse(review);
+    }
+
     private void validateDuplicateReview(
             UUID userId,
             UUID bookId
@@ -74,6 +99,18 @@ public class BasicReviewService implements ReviewService {
 
         if (duplicate) {
             throw new DuplicateReviewException(userId, bookId);
+        }
+    }
+
+    private void validateReviewOwner(
+            Review review,
+            UUID requesterId
+    ) {
+        if (!review.getUser().getId().equals(requesterId)) {
+            throw new ReviewAccessDeniedException(
+                    review.getId(),
+                    requesterId
+            );
         }
     }
 
