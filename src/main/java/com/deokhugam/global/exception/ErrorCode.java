@@ -40,7 +40,7 @@ public enum ErrorCode {
 
   REVIEW_ACCESS_DENIED(
           HttpStatus.FORBIDDEN,
-          "리뷰를 수정할 권한이 없습니다."
+          "리뷰에 대한 권한이 없습니다."
   ),
 
   INTERNAL_SERVER_ERROR(
