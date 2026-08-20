@@ -1,14 +1,19 @@
 package com.deokhugam.review.controller;
 
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
+import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
 import com.deokhugam.review.service.ReviewService;
 import jakarta.validation.Valid;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,6 +21,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/reviews")
 @RequiredArgsConstructor
 public class ReviewController {
+
+    private static final String REQUEST_USER_ID_HEADER =
+            "Deokhugam-Request-User-ID";
 
     private final ReviewService reviewService;
 
@@ -28,5 +36,20 @@ public class ReviewController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    @PatchMapping("/{reviewId}")
+    public ResponseEntity<ReviewDetailResponse> update(
+            @PathVariable UUID reviewId,
+            @RequestHeader(REQUEST_USER_ID_HEADER) UUID requesterId,
+            @Valid @RequestBody ReviewUpdateRequest request
+    ) {
+        ReviewDetailResponse response = reviewService.update(
+                reviewId,
+                requesterId,
+                request
+        );
+
+        return ResponseEntity.ok(response);
     }
 }
