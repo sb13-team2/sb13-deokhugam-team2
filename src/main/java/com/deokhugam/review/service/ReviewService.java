@@ -9,6 +9,11 @@ public interface ReviewService {
 
     ReviewDetailResponse create(ReviewCreateRequest request);
 
+    ReviewDetailResponse findById(
+            UUID reviewId,
+            UUID requesterId
+    );
+
     ReviewDetailResponse update(
             UUID reviewId,
             UUID requesterId,

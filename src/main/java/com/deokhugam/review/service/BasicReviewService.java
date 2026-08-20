@@ -12,6 +12,7 @@ import com.deokhugam.review.entity.Review;
 import com.deokhugam.review.exception.DuplicateReviewException;
 import com.deokhugam.review.exception.ReviewAccessDeniedException;
 import com.deokhugam.review.exception.ReviewNotFoundException;
+import com.deokhugam.review.repository.ReviewLikeRepository;
 import com.deokhugam.review.repository.ReviewRepository;
 import com.deokhugam.user.entity.User;
 import com.deokhugam.user.exception.UserException;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BasicReviewService implements ReviewService {
 
     private final ReviewRepository reviewRepository;
+    private final ReviewLikeRepository reviewLikeRepository;
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
     private final Storage storage;
@@ -62,7 +64,27 @@ public class BasicReviewService implements ReviewService {
 
         Review savedReview = reviewRepository.save(review);
 
-        return toResponse(savedReview);
+        return toResponse(savedReview, false);
+    }
+
+    @Override
+    public ReviewDetailResponse findById(
+            UUID reviewId,
+            UUID requesterId
+    ) {
+        Review review = reviewRepository
+                .findByIdAndDeletedAtIsNull(reviewId)
+                .orElseThrow(() ->
+                        new ReviewNotFoundException(reviewId)
+                );
+
+        boolean likedByMe =
+                reviewLikeRepository.existsByReviewIdAndUserId(
+                        reviewId,
+                        requesterId
+                );
+
+        return toResponse(review, likedByMe);
     }
 
     @Override
@@ -87,7 +109,7 @@ public class BasicReviewService implements ReviewService {
 
         Review updatedReview = reviewRepository.saveAndFlush(review);
 
-        return toResponse(updatedReview);
+        return toResponse(updatedReview, false);
     }
 
     private void validateDuplicateReview(
@@ -118,7 +140,10 @@ public class BasicReviewService implements ReviewService {
         }
     }
 
-    private ReviewDetailResponse toResponse(Review review) {
+    private ReviewDetailResponse toResponse(
+            Review review,
+            boolean likedByMe
+    ) {
         String thumbnailUrl = review.getBook().getThumbnailUrl();
 
         if (thumbnailUrl != null && !thumbnailUrl.isBlank()) {
@@ -136,7 +161,7 @@ public class BasicReviewService implements ReviewService {
                 review.getRating(),
                 review.getLikeCount(),
                 review.getCommentCount(),
-                false,
+                likedByMe,
                 review.getCreatedAt(),
                 review.getUpdatedAt()
         );
