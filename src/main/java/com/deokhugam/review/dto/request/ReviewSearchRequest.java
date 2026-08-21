@@ -81,4 +81,19 @@ public record ReviewSearchRequest(
             return false;
         }
     }
+
+    @AssertTrue(
+            message = "평점 정렬에서 cursor를 사용하는 경우 after가 필요합니다."
+    )
+    public boolean isRatingCursorPairValid() {
+        if (!"rating".equals(orderBy)) {
+            return true;
+        }
+
+        if (cursor == null || cursor.isBlank()) {
+            return true;
+        }
+
+        return after != null;
+    }
 }
