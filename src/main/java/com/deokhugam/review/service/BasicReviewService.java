@@ -166,6 +166,13 @@ public class BasicReviewService implements ReviewService {
                         new ReviewNotFoundException(reviewId)
                 );
 
+        User requester = userRepository
+                .findByIdAndDeletedAtIsNull(requesterId)
+                .orElseThrow(() -> new UserException(
+                        ErrorCode.USER_NOT_FOUND,
+                        Map.of("userId", requesterId)
+                ));
+
         Optional<ReviewLike> existingReviewLike =
                 reviewLikeRepository.findByReviewIdAndUserId(
                         reviewId,
@@ -182,13 +189,6 @@ public class BasicReviewService implements ReviewService {
                     false
             );
         }
-
-        User requester = userRepository
-                .findByIdAndDeletedAtIsNull(requesterId)
-                .orElseThrow(() -> new UserException(
-                        ErrorCode.USER_NOT_FOUND,
-                        Map.of("userId", requesterId)
-                ));
 
         ReviewLike reviewLike = ReviewLike.create(
                 review,
