@@ -10,8 +10,11 @@ import com.deokhugam.review.entity.Review;
 import com.deokhugam.user.entity.User;
 import com.deokhugam.user.repository.UserRepository;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -29,6 +32,9 @@ class ReviewRepositoryCustomTest {
 
     @Autowired
     private BookRepository bookRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     void 키워드가_작성자_닉네임_내용_도서_제목에_부분_일치하는_리뷰를_조회한다() {
@@ -206,6 +212,92 @@ class ReviewRepositoryCustomTest {
                 .extracting(Review::getId)
                 .containsExactly(activeReview.getId());
         assertThat(totalElements).isEqualTo(1L);
+    }
+
+    @Test
+    void 평점이_같으면_생성일_보조_커서_다음의_리뷰를_조회한다() {
+        User newestUser = saveUser("최신 작성자");
+        User cursorUser = saveUser("커서 작성자");
+        User oldestUser = saveUser("이전 작성자");
+
+        Book newestBook = saveBook("최신 도서");
+        Book cursorBook = saveBook("커서 도서");
+        Book oldestBook = saveBook("이전 도서");
+
+        Review newestReview = saveReview(
+                newestUser,
+                newestBook,
+                "최신 리뷰",
+                4
+        );
+        Review cursorReview = saveReview(
+                cursorUser,
+                cursorBook,
+                "커서 리뷰",
+                4
+        );
+        Review oldestReview = saveReview(
+                oldestUser,
+                oldestBook,
+                "이전 리뷰",
+                4
+        );
+
+        LocalDateTime newestCreatedAt =
+                LocalDateTime.of(2026, 8, 21, 11, 0);
+        LocalDateTime cursorCreatedAt =
+                LocalDateTime.of(2026, 8, 21, 10, 0);
+        LocalDateTime oldestCreatedAt =
+                LocalDateTime.of(2026, 8, 21, 9, 0);
+
+        updateCreatedAt(
+                newestReview.getId(),
+                newestCreatedAt
+        );
+        updateCreatedAt(
+                cursorReview.getId(),
+                cursorCreatedAt
+        );
+        updateCreatedAt(
+                oldestReview.getId(),
+                oldestCreatedAt
+        );
+
+        entityManager.clear();
+
+        ReviewSearchRequest request = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "rating",
+                "DESC",
+                "4",
+                cursorCreatedAt,
+                50
+        );
+
+        List<Review> result =
+                reviewRepository.findAllByCursor(request);
+
+        assertThat(result)
+                .extracting(Review::getId)
+                .containsExactly(oldestReview.getId());
+    }
+
+    private void updateCreatedAt(
+            UUID reviewId,
+            LocalDateTime createdAt
+    ) {
+        entityManager.createQuery(
+                        """
+                        UPDATE Review review
+                        SET review.createdAt = :createdAt
+                        WHERE review.id = :reviewId
+                        """
+                )
+                .setParameter("createdAt", createdAt)
+                .setParameter("reviewId", reviewId)
+                .executeUpdate();
     }
 
     private User saveUser(String nickname) {
