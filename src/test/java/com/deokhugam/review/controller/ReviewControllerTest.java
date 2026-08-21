@@ -14,6 +14,7 @@ import com.deokhugam.global.config.SecurityConfig;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
+import com.deokhugam.review.dto.response.ReviewLikeResponse;
 import com.deokhugam.review.exception.DuplicateReviewException;
 import com.deokhugam.review.exception.ReviewAccessDeniedException;
 import com.deokhugam.review.exception.ReviewNotFoundException;
@@ -339,5 +340,69 @@ class ReviewControllerTest {
                         .value(requesterId.toString()))
                 .andExpect(jsonPath("$.message")
                         .value("리뷰에 대한 권한이 없습니다."));
+    }
+
+    @Test
+    void 리뷰_좋아요를_토글하면_200과_좋아요_상태를_반환한다()
+            throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        ReviewLikeResponse response = new ReviewLikeResponse(
+                reviewId,
+                requesterId,
+                true
+        );
+
+        given(reviewService.toggleLike(
+                eq(reviewId),
+                eq(requesterId)
+        )).willReturn(response);
+
+        mockMvc.perform(post(
+                        "/api/reviews/{reviewId}/like",
+                        reviewId
+                )
+                        .header(
+                                REQUEST_USER_ID_HEADER,
+                                requesterId
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reviewId")
+                        .value(reviewId.toString()))
+                .andExpect(jsonPath("$.userId")
+                        .value(requesterId.toString()))
+                .andExpect(jsonPath("$.liked").value(true));
+
+        verify(reviewService).toggleLike(
+                reviewId,
+                requesterId
+        );
+    }
+
+    @Test
+    void 활성_리뷰가_존재하지_않으면_좋아요시_404를_반환한다()
+            throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        given(reviewService.toggleLike(
+                eq(reviewId),
+                eq(requesterId)
+        )).willThrow(new ReviewNotFoundException(reviewId));
+
+        mockMvc.perform(post(
+                        "/api/reviews/{reviewId}/like",
+                        reviewId
+                )
+                        .header(
+                                REQUEST_USER_ID_HEADER,
+                                requesterId
+                        ))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code")
+                        .value("REVIEW_NOT_FOUND"))
+                .andExpect(jsonPath("$.details.reviewId")
+                        .value(reviewId.toString()));
     }
 }
