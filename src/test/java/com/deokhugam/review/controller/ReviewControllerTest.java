@@ -12,15 +12,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.deokhugam.global.config.SecurityConfig;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
+import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
 import com.deokhugam.review.dto.response.ReviewLikeResponse;
+import com.deokhugam.review.dto.response.ReviewListItemResponse;
+import com.deokhugam.review.dto.response.ReviewListResponse;
 import com.deokhugam.review.exception.DuplicateReviewException;
 import com.deokhugam.review.exception.ReviewAccessDeniedException;
 import com.deokhugam.review.exception.ReviewNotFoundException;
 import com.deokhugam.review.service.ReviewService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -404,5 +408,120 @@ class ReviewControllerTest {
                         .value("REVIEW_NOT_FOUND"))
                 .andExpect(jsonPath("$.details.reviewId")
                         .value(reviewId.toString()));
+    }
+
+    @Test
+    void 리뷰_목록을_조회하면_200과_커서_페이지를_반환한다()
+            throws Exception {
+        UUID requesterId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+        UUID reviewId = UUID.randomUUID();
+
+        LocalDateTime createdAt =
+                LocalDateTime.of(2026, 8, 21, 10, 0);
+
+        ReviewSearchRequest request = new ReviewSearchRequest(
+                authorId,
+                bookId,
+                "좋은",
+                "rating",
+                "DESC",
+                "5",
+                createdAt,
+                10
+        );
+
+        ReviewListItemResponse review = new ReviewListItemResponse(
+                reviewId,
+                bookId,
+                "테스트 도서",
+                "https://example.com/thumbnail.jpg",
+                authorId,
+                "작성자",
+                "좋은 책입니다.",
+                4,
+                3,
+                2,
+                true,
+                createdAt,
+                createdAt
+        );
+
+        ReviewListResponse response = new ReviewListResponse(
+                List.of(review),
+                "4",
+                createdAt,
+                1,
+                1L,
+                false
+        );
+
+        given(reviewService.findAll(
+                eq(request),
+                eq(requesterId)
+        )).willReturn(response);
+
+        mockMvc.perform(get("/api/reviews")
+                        .header(
+                                REQUEST_USER_ID_HEADER,
+                                requesterId
+                        )
+                        .param("userId", authorId.toString())
+                        .param("bookId", bookId.toString())
+                        .param("keyword", "좋은")
+                        .param("orderBy", "rating")
+                        .param("direction", "DESC")
+                        .param("cursor", "5")
+                        .param("after", createdAt.toString())
+                        .param("limit", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id")
+                        .value(reviewId.toString()))
+                .andExpect(jsonPath("$.content[0].bookId")
+                        .value(bookId.toString()))
+                .andExpect(jsonPath("$.content[0].bookTitle")
+                        .value("테스트 도서"))
+                .andExpect(jsonPath("$.content[0].userId")
+                        .value(authorId.toString()))
+                .andExpect(jsonPath("$.content[0].content")
+                        .value("좋은 책입니다."))
+                .andExpect(jsonPath("$.content[0].rating").value(4))
+                .andExpect(jsonPath("$.content[0].likedByMe")
+                        .value(true))
+                .andExpect(jsonPath("$.nextCursor").value("4"))
+                .andExpect(jsonPath("$.nextAfter")
+                        .value(createdAt.toString()))
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.hasNext").value(false));
+
+        verify(reviewService).findAll(
+                request,
+                requesterId
+        );
+    }
+
+    @Test
+    void 리뷰_목록의_정렬_기준이_올바르지_않으면_400을_반환한다()
+            throws Exception {
+        UUID requesterId = UUID.randomUUID();
+
+        mockMvc.perform(get("/api/reviews")
+                        .header(
+                                REQUEST_USER_ID_HEADER,
+                                requesterId
+                        )
+                        .param("orderBy", "likeCount"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value("INVALID_INPUT_VALUE"));
+
+        verify(reviewService, never()).findAll(
+                any(ReviewSearchRequest.class),
+                any(UUID.class)
+        );
     }
 }
