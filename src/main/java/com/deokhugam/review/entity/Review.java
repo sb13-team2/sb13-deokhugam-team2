@@ -85,4 +85,14 @@ public class Review extends SoftDeleteEntity {
         this.content = content;
         this.rating = rating;
     }
+
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
 }
