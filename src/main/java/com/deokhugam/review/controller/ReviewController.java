@@ -3,6 +3,7 @@ package com.deokhugam.review.controller;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
+import com.deokhugam.review.dto.response.ReviewLikeResponse;
 import com.deokhugam.review.service.ReviewService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -71,5 +72,18 @@ public class ReviewController {
         );
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{reviewId}/like")
+    public ResponseEntity<ReviewLikeResponse> toggleLike(
+            @PathVariable UUID reviewId,
+            @RequestHeader(REQUEST_USER_ID_HEADER) UUID requesterId
+    ) {
+        ReviewLikeResponse response = reviewService.toggleLike(
+                reviewId,
+                requesterId
+        );
+
+        return ResponseEntity.ok(response);
     }
 }
