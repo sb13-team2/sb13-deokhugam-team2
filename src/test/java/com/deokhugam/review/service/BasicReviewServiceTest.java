@@ -14,7 +14,9 @@ import com.deokhugam.global.storage.Storage;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
+import com.deokhugam.review.dto.response.ReviewLikeResponse;
 import com.deokhugam.review.entity.Review;
+import com.deokhugam.review.entity.ReviewLike;
 import com.deokhugam.review.exception.DuplicateReviewException;
 import com.deokhugam.review.exception.ReviewAccessDeniedException;
 import com.deokhugam.review.exception.ReviewNotFoundException;
@@ -547,6 +549,134 @@ class BasicReviewServiceTest {
         )).isInstanceOf(ReviewAccessDeniedException.class);
 
         assertThat(review.isDeleted()).isFalse();
+    }
+
+    @Test
+    void 좋아요가_없으면_좋아요를_추가한다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User author = createUser(authorId);
+        User requester = createUser(requesterId);
+        Book book = createBook(bookId);
+        Review review = createReview(reviewId, author, book);
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        given(reviewLikeRepository.findByReviewIdAndUserId(
+                reviewId,
+                requesterId
+        )).willReturn(Optional.empty());
+
+        given(userRepository.findByIdAndDeletedAtIsNull(requesterId))
+                .willReturn(Optional.of(requester));
+
+        ReviewLikeResponse response = reviewService.toggleLike(
+                reviewId,
+                requesterId
+        );
+
+        assertThat(response.reviewId()).isEqualTo(reviewId);
+        assertThat(response.userId()).isEqualTo(requesterId);
+        assertThat(response.liked()).isTrue();
+        assertThat(review.getLikeCount()).isEqualTo(1);
+
+        verify(reviewLikeRepository).save(any(ReviewLike.class));
+    }
+
+    @Test
+    void 좋아요가_있으면_좋아요를_취소한다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User author = createUser(authorId);
+        User requester = createUser(requesterId);
+        Book book = createBook(bookId);
+        Review review = createReview(reviewId, author, book);
+        review.increaseLikeCount();
+
+        ReviewLike reviewLike = ReviewLike.create(
+                review,
+                requester
+        );
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        given(reviewLikeRepository.findByReviewIdAndUserId(
+                reviewId,
+                requesterId
+        )).willReturn(Optional.of(reviewLike));
+
+        ReviewLikeResponse response = reviewService.toggleLike(
+                reviewId,
+                requesterId
+        );
+
+        assertThat(response.reviewId()).isEqualTo(reviewId);
+        assertThat(response.userId()).isEqualTo(requesterId);
+        assertThat(response.liked()).isFalse();
+        assertThat(review.getLikeCount()).isZero();
+
+        verify(reviewLikeRepository).delete(reviewLike);
+        verify(userRepository, never())
+                .findByIdAndDeletedAtIsNull(any(UUID.class));
+    }
+
+    @Test
+    void 활성_리뷰가_존재하지_않으면_좋아요에_실패한다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reviewService.toggleLike(
+                reviewId,
+                requesterId
+        )).isInstanceOf(ReviewNotFoundException.class);
+
+        verify(reviewLikeRepository, never())
+                .findByReviewIdAndUserId(
+                        any(UUID.class),
+                        any(UUID.class)
+                );
+    }
+
+    @Test
+    void 요청_사용자가_존재하지_않으면_좋아요_추가에_실패한다() {
+        UUID reviewId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User author = createUser(authorId);
+        Book book = createBook(bookId);
+        Review review = createReview(reviewId, author, book);
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        given(reviewLikeRepository.findByReviewIdAndUserId(
+                reviewId,
+                requesterId
+        )).willReturn(Optional.empty());
+
+        given(userRepository.findByIdAndDeletedAtIsNull(requesterId))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reviewService.toggleLike(
+                reviewId,
+                requesterId
+        )).isInstanceOf(UserException.class);
+
+        verify(reviewLikeRepository, never())
+                .save(any(ReviewLike.class));
     }
 
     private Review createReview(
