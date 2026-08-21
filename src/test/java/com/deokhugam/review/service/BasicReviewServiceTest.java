@@ -608,6 +608,9 @@ class BasicReviewServiceTest {
         given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
                 .willReturn(Optional.of(review));
 
+        given(userRepository.findByIdAndDeletedAtIsNull(requesterId))
+                .willReturn(Optional.of(requester));
+
         given(reviewLikeRepository.findByReviewIdAndUserId(
                 reviewId,
                 requesterId
@@ -624,8 +627,6 @@ class BasicReviewServiceTest {
         assertThat(review.getLikeCount()).isZero();
 
         verify(reviewLikeRepository).delete(reviewLike);
-        verify(userRepository, never())
-                .findByIdAndDeletedAtIsNull(any(UUID.class));
     }
 
     @Test
@@ -649,7 +650,7 @@ class BasicReviewServiceTest {
     }
 
     @Test
-    void 요청_사용자가_존재하지_않으면_좋아요_추가에_실패한다() {
+    void 요청_사용자가_존재하지_않으면_좋아요_토글에_실패한다() {
         UUID reviewId = UUID.randomUUID();
         UUID authorId = UUID.randomUUID();
         UUID requesterId = UUID.randomUUID();
@@ -662,11 +663,6 @@ class BasicReviewServiceTest {
         given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
                 .willReturn(Optional.of(review));
 
-        given(reviewLikeRepository.findByReviewIdAndUserId(
-                reviewId,
-                requesterId
-        )).willReturn(Optional.empty());
-
         given(userRepository.findByIdAndDeletedAtIsNull(requesterId))
                 .willReturn(Optional.empty());
 
@@ -674,6 +670,12 @@ class BasicReviewServiceTest {
                 reviewId,
                 requesterId
         )).isInstanceOf(UserException.class);
+
+        verify(reviewLikeRepository, never())
+                .findByReviewIdAndUserId(
+                        any(UUID.class),
+                        any(UUID.class)
+                );
 
         verify(reviewLikeRepository, never())
                 .save(any(ReviewLike.class));
