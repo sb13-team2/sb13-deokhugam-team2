@@ -133,4 +133,69 @@ class ReviewSearchRequestTest {
                 )
                 .contains("limit");
     }
+
+    @Test
+    void 소문자_정렬_방향은_검증에_실패한다() {
+        ReviewSearchRequest request = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "createdAt",
+                "desc",
+                null,
+                null,
+                20
+        );
+
+        Set<ConstraintViolation<ReviewSearchRequest>> violations =
+                validator.validate(request);
+
+        assertThat(violations)
+                .extracting(violation ->
+                        violation.getPropertyPath().toString()
+                )
+                .contains("direction");
+    }
+
+    @Test
+    void 평점_정렬의_커서가_숫자가_아니면_검증에_실패한다() {
+        ReviewSearchRequest request = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "rating",
+                "DESC",
+                "not-a-number",
+                null,
+                20
+        );
+
+        Set<ConstraintViolation<ReviewSearchRequest>> violations =
+                validator.validate(request);
+
+        assertThat(violations)
+                .extracting(ConstraintViolation::getMessage)
+                .contains("커서 형식이 올바르지 않습니다.");
+    }
+
+    @Test
+    void 생성일_정렬의_커서가_날짜가_아니면_검증에_실패한다() {
+        ReviewSearchRequest request = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "createdAt",
+                "DESC",
+                "not-a-date",
+                null,
+                20
+        );
+
+        Set<ConstraintViolation<ReviewSearchRequest>> violations =
+                validator.validate(request);
+
+        assertThat(violations)
+                .extracting(ConstraintViolation::getMessage)
+                .contains("커서 형식이 올바르지 않습니다.");
+    }
 }
