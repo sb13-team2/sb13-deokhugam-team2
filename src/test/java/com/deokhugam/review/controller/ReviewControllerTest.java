@@ -524,4 +524,40 @@ class ReviewControllerTest {
                 any(UUID.class)
         );
     }
+
+    @Test
+    void 리뷰_목록의_커서_형식이_올바르지_않으면_400을_반환한다()
+            throws Exception {
+        UUID requesterId = UUID.randomUUID();
+
+        mockMvc.perform(get("/api/reviews")
+                        .header(
+                                REQUEST_USER_ID_HEADER,
+                                requesterId
+                        )
+                        .param("orderBy", "rating")
+                        .param("cursor", "not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value("INVALID_INPUT_VALUE"));
+
+        verify(reviewService, never()).findAll(
+                any(ReviewSearchRequest.class),
+                any(UUID.class)
+        );
+    }
+
+    @Test
+    void 리뷰_목록의_요청자_헤더가_없으면_400을_반환한다()
+            throws Exception {
+        mockMvc.perform(get("/api/reviews"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value("INVALID_INPUT_VALUE"));
+
+        verify(reviewService, never()).findAll(
+                any(ReviewSearchRequest.class),
+                any(UUID.class)
+        );
+    }
 }
