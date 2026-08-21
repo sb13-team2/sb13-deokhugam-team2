@@ -1,10 +1,12 @@
 package com.deokhugam.review.dto.request;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.UUID;
 
 public record ReviewSearchRequest(
@@ -22,7 +24,7 @@ public record ReviewSearchRequest(
         String orderBy,
 
         @Pattern(
-                regexp = "(?i)ASC|DESC",
+                regexp = "ASC|DESC",
                 message = "정렬 방향은 ASC 또는 DESC여야 합니다."
         )
         String direction,
@@ -51,6 +53,32 @@ public record ReviewSearchRequest(
 
         if (limit == null) {
             limit = 50;
+        }
+    }
+
+    @AssertTrue(message = "커서 형식이 올바르지 않습니다.")
+    public boolean isCursorValid() {
+        if (cursor == null || cursor.isBlank()) {
+            return true;
+        }
+
+        try {
+            if ("rating".equals(orderBy)) {
+                Integer.parseInt(cursor);
+                return true;
+            }
+
+            if ("createdAt".equals(orderBy)) {
+                LocalDateTime.parse(cursor);
+                return true;
+            }
+
+            return true;
+        } catch (
+                NumberFormatException
+                | DateTimeParseException exception
+        ) {
+            return false;
         }
     }
 }
