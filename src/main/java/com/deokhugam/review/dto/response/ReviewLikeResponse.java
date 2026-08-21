@@ -1,4 +1,10 @@
 package com.deokhugam.review.dto.response;
 
-public record ReviewLikeResponse() {
+import java.util.UUID;
+
+public record ReviewLikeResponse(
+        UUID reviewId,
+        UUID userId,
+        boolean liked
+) {
 }
