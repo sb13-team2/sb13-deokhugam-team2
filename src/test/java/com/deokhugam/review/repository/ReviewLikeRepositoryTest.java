@@ -10,6 +10,7 @@ import com.deokhugam.review.entity.ReviewLike;
 import com.deokhugam.user.entity.User;
 import com.deokhugam.user.repository.UserRepository;
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
