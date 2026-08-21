@@ -71,4 +71,41 @@ class ReviewEntityTest {
         assertThat(review.getContent()).isEqualTo("수정 후 내용");
         assertThat(review.getRating()).isEqualTo(5);
     }
+
+    @Test
+    void 리뷰_좋아요_수를_증가시키고_0_미만으로_감소시키지_않는다() {
+        User user = User.create(
+                "reviewer@example.com",
+                "리아",
+                "encodedPassword"
+        );
+
+        Book book = new Book(
+                "테스트 도서",
+                "테스트 저자",
+                "테스트 설명",
+                "테스트 출판사",
+                LocalDate.of(2026, 8, 21),
+                "9781234567890"
+        );
+
+        Review review = Review.create(
+                user,
+                book,
+                "좋은 책입니다.",
+                5
+        );
+
+        review.increaseLikeCount();
+
+        assertThat(review.getLikeCount()).isEqualTo(1);
+
+        review.decreaseLikeCount();
+
+        assertThat(review.getLikeCount()).isZero();
+
+        review.decreaseLikeCount();
+
+        assertThat(review.getLikeCount()).isZero();
+    }
 }
