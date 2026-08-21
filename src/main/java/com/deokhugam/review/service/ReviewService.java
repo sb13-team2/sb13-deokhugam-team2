@@ -3,6 +3,8 @@ package com.deokhugam.review.service;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
+import com.deokhugam.review.dto.response.ReviewLikeResponse;
+
 import java.util.UUID;
 
 public interface ReviewService {
@@ -21,6 +23,11 @@ public interface ReviewService {
     );
 
     void softDelete(
+            UUID reviewId,
+            UUID requesterId
+    );
+
+    ReviewLikeResponse toggleLike(
             UUID reviewId,
             UUID requesterId
     );

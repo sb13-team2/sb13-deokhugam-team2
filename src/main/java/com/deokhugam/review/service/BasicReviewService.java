@@ -8,7 +8,9 @@ import com.deokhugam.global.storage.Storage;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
+import com.deokhugam.review.dto.response.ReviewLikeResponse;
 import com.deokhugam.review.entity.Review;
+import com.deokhugam.review.entity.ReviewLike;
 import com.deokhugam.review.exception.DuplicateReviewException;
 import com.deokhugam.review.exception.ReviewAccessDeniedException;
 import com.deokhugam.review.exception.ReviewNotFoundException;
@@ -18,6 +20,7 @@ import com.deokhugam.user.entity.User;
 import com.deokhugam.user.exception.UserException;
 import com.deokhugam.user.repository.UserRepository;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -149,6 +152,57 @@ public class BasicReviewService implements ReviewService {
         if (duplicate) {
             throw new DuplicateReviewException(userId, bookId);
         }
+    }
+
+    @Override
+    @Transactional
+    public ReviewLikeResponse toggleLike(
+            UUID reviewId,
+            UUID requesterId
+    ) {
+        Review review = reviewRepository
+                .findByIdAndDeletedAtIsNull(reviewId)
+                .orElseThrow(() ->
+                        new ReviewNotFoundException(reviewId)
+                );
+
+        Optional<ReviewLike> existingReviewLike =
+                reviewLikeRepository.findByReviewIdAndUserId(
+                        reviewId,
+                        requesterId
+                );
+
+        if (existingReviewLike.isPresent()) {
+            reviewLikeRepository.delete(existingReviewLike.get());
+            review.decreaseLikeCount();
+
+            return new ReviewLikeResponse(
+                    reviewId,
+                    requesterId,
+                    false
+            );
+        }
+
+        User requester = userRepository
+                .findByIdAndDeletedAtIsNull(requesterId)
+                .orElseThrow(() -> new UserException(
+                        ErrorCode.USER_NOT_FOUND,
+                        Map.of("userId", requesterId)
+                ));
+
+        ReviewLike reviewLike = ReviewLike.create(
+                review,
+                requester
+        );
+
+        reviewLikeRepository.save(reviewLike);
+        review.increaseLikeCount();
+
+        return new ReviewLikeResponse(
+                reviewId,
+                requesterId,
+                true
+        );
     }
 
     private void validateReviewOwner(
