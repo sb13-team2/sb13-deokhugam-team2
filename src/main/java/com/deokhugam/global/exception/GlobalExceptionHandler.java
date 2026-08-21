@@ -6,9 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @Slf4j
 @RestControllerAdvice
@@ -66,6 +69,25 @@ public class GlobalExceptionHandler {
             errorMessage,
             Map.of()
         ));
+  }
+
+  @ExceptionHandler({
+          MissingRequestHeaderException.class,
+          MissingServletRequestParameterException.class,
+          MethodArgumentTypeMismatchException.class
+  })
+  public ResponseEntity<ErrorResponse> handleRequestBindingException(
+          Exception e
+  ) {
+    return ResponseEntity
+            .badRequest()
+            .body(ErrorResponse.of(
+                    HttpStatus.BAD_REQUEST.value(),
+                    "INVALID_INPUT_VALUE",
+                    e.getClass().getSimpleName(),
+                    "요청 값이 올바르지 않습니다.",
+                    Map.of()
+            ));
   }
 
   @ExceptionHandler(Exception.class)
