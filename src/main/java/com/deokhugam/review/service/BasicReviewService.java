@@ -6,9 +6,12 @@ import com.deokhugam.book.repository.BookRepository;
 import com.deokhugam.global.exception.ErrorCode;
 import com.deokhugam.global.storage.Storage;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
+import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
 import com.deokhugam.review.dto.response.ReviewDetailResponse;
 import com.deokhugam.review.dto.response.ReviewLikeResponse;
+import com.deokhugam.review.dto.response.ReviewListItemResponse;
+import com.deokhugam.review.dto.response.ReviewListResponse;
 import com.deokhugam.review.entity.Review;
 import com.deokhugam.review.entity.ReviewLike;
 import com.deokhugam.review.exception.DuplicateReviewException;
@@ -19,9 +22,11 @@ import com.deokhugam.review.repository.ReviewRepository;
 import com.deokhugam.user.entity.User;
 import com.deokhugam.user.exception.UserException;
 import com.deokhugam.user.repository.UserRepository;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,6 +73,63 @@ public class BasicReviewService implements ReviewService {
         Review savedReview = reviewRepository.save(review);
 
         return toResponse(savedReview, false);
+    }
+
+    @Override
+    public ReviewListResponse findAll(
+            ReviewSearchRequest request,
+            UUID requesterId
+    ) {
+        List<Review> searchedReviews =
+                reviewRepository.findAllByCursor(request);
+
+        boolean hasNext = searchedReviews.size() > request.limit();
+
+        List<Review> reviews = hasNext
+                ? searchedReviews.subList(0, request.limit())
+                : searchedReviews;
+
+        Set<UUID> reviewIds = reviews.stream()
+                .map(Review::getId)
+                .collect(Collectors.toSet());
+
+        Set<UUID> likedReviewIds = reviewIds.isEmpty()
+                ? Set.of()
+                : reviewLikeRepository.findLikedReviewIds(
+                requesterId,
+                reviewIds
+        );
+
+        List<ReviewListItemResponse> content = reviews.stream()
+                .map(review -> toListItemResponse(
+                        review,
+                        likedReviewIds.contains(review.getId())
+                ))
+                .toList();
+
+        String nextCursor = null;
+        LocalDateTime nextAfter = null;
+
+        if (hasNext && !reviews.isEmpty()) {
+            Review lastReview = reviews.get(reviews.size() - 1);
+
+            nextCursor = createNextCursor(
+                    lastReview,
+                    request.orderBy()
+            );
+            nextAfter = lastReview.getCreatedAt();
+        }
+
+        long totalElements = reviewRepository.countAll(request);
+
+        return new ReviewListResponse(
+                content,
+                nextCursor,
+                nextAfter,
+                content.size(),
+                totalElements,
+                hasNext
+        );
     }
 
     @Override
@@ -215,6 +277,44 @@ public class BasicReviewService implements ReviewService {
                     requesterId
             );
         }
+    }
+
+    private ReviewListItemResponse toListItemResponse(
+            Review review,
+            boolean likedByMe
+    ) {
+        String thumbnailUrl = review.getBook().getThumbnailUrl();
+
+        if (thumbnailUrl != null && !thumbnailUrl.isBlank()) {
+            thumbnailUrl = storage.getUrl(thumbnailUrl);
+        }
+
+        return new ReviewListItemResponse(
+                review.getId(),
+                review.getBook().getId(),
+                review.getBook().getTitle(),
+                thumbnailUrl,
+                review.getUser().getId(),
+                review.getUser().getNickname(),
+                review.getContent(),
+                review.getRating(),
+                review.getLikeCount(),
+                review.getCommentCount(),
+                likedByMe,
+                review.getCreatedAt(),
+                review.getUpdatedAt()
+        );
+    }
+
+    private String createNextCursor(
+            Review review,
+            String orderBy
+    ) {
+        if ("rating".equals(orderBy)) {
+            return review.getRating().toString();
+        }
+
+        return review.getCreatedAt().toString();
     }
 
     private ReviewDetailResponse toResponse(
