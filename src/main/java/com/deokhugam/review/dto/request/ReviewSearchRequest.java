@@ -2,6 +2,8 @@ package com.deokhugam.review.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
+import org.springframework.format.annotation.DateTimeFormat;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -27,6 +29,7 @@ public record ReviewSearchRequest(
 
         String cursor,
 
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
         LocalDateTime after,
 
         @Min(

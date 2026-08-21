@@ -453,8 +453,8 @@ class ReviewControllerTest {
                 "4",
                 createdAt,
                 1,
-                1L,
-                false
+                2L,
+                true
         );
 
         given(reviewService.findAll(
@@ -493,10 +493,10 @@ class ReviewControllerTest {
                         .value(true))
                 .andExpect(jsonPath("$.nextCursor").value("4"))
                 .andExpect(jsonPath("$.nextAfter")
-                        .value(createdAt.toString()))
+                        .value("2026-08-21T10:00:00"))
                 .andExpect(jsonPath("$.size").value(1))
-                .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.hasNext").value(false));
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.hasNext").value(true));
 
         verify(reviewService).findAll(
                 request,
