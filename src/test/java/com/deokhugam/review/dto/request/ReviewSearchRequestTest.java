@@ -6,6 +6,8 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
@@ -55,7 +57,7 @@ class ReviewSearchRequestTest {
                 "rating",
                 "ASC",
                 "4",
-                null,
+                LocalDateTime.of(2026, 8, 21, 10, 0),
                 20
         );
 
@@ -197,5 +199,28 @@ class ReviewSearchRequestTest {
         assertThat(violations)
                 .extracting(ConstraintViolation::getMessage)
                 .contains("커서 형식이 올바르지 않습니다.");
+    }
+
+    @Test
+    void 평점_정렬에서_커서만_있고_after가_없으면_검증에_실패한다() {
+        ReviewSearchRequest request = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "rating",
+                "DESC",
+                "4",
+                null,
+                20
+        );
+
+        Set<ConstraintViolation<ReviewSearchRequest>> violations =
+                validator.validate(request);
+
+        assertThat(violations)
+                .extracting(ConstraintViolation::getMessage)
+                .contains(
+                        "평점 정렬에서 cursor를 사용하는 경우 after가 필요합니다."
+                );
     }
 }
