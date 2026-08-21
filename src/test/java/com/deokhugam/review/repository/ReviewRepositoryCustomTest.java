@@ -1,0 +1,249 @@
+package com.deokhugam.review.repository;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.deokhugam.book.entity.Book;
+import com.deokhugam.book.repository.BookRepository;
+import com.deokhugam.global.config.JpaConfig;
+import com.deokhugam.review.dto.request.ReviewSearchRequest;
+import com.deokhugam.review.entity.Review;
+import com.deokhugam.user.entity.User;
+import com.deokhugam.user.repository.UserRepository;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+
+@DataJpaTest
+@Import(JpaConfig.class)
+class ReviewRepositoryCustomTest {
+
+    @Autowired
+    private ReviewRepository reviewRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private BookRepository bookRepository;
+
+    @Test
+    void 키워드가_작성자_닉네임_내용_도서_제목에_부분_일치하는_리뷰를_조회한다() {
+        User nicknameUser = saveUser("검색어독서가");
+        User contentUser = saveUser("내용작성자");
+        User bookUser = saveUser("도서작성자");
+
+        Book normalBook1 = saveBook("일반 도서 1");
+        Book normalBook2 = saveBook("일반 도서 2");
+        Book keywordBook = saveBook("검색어가 포함된 도서");
+
+        Review nicknameReview = saveReview(
+                nicknameUser,
+                normalBook1,
+                "평범한 내용",
+                5
+        );
+        Review contentReview = saveReview(
+                contentUser,
+                normalBook2,
+                "리뷰 내용에 검색어가 있습니다.",
+                4
+        );
+        Review bookReview = saveReview(
+                bookUser,
+                keywordBook,
+                "다른 내용",
+                3
+        );
+
+        ReviewSearchRequest request = new ReviewSearchRequest(
+                null,
+                null,
+                "검색어",
+                "createdAt",
+                "DESC",
+                null,
+                null,
+                50
+        );
+
+        List<Review> result =
+                reviewRepository.findAllByCursor(request);
+
+        assertThat(result)
+                .extracting(Review::getId)
+                .containsExactlyInAnyOrder(
+                        nicknameReview.getId(),
+                        contentReview.getId(),
+                        bookReview.getId()
+                );
+    }
+
+    @Test
+    void 작성자와_도서_조건이_모두_일치하는_리뷰만_조회한다() {
+        User targetUser = saveUser("대상 작성자");
+        User otherUser = saveUser("다른 작성자");
+
+        Book targetBook = saveBook("대상 도서");
+        Book otherBook = saveBook("다른 도서");
+
+        Review targetReview = saveReview(
+                targetUser,
+                targetBook,
+                "대상 리뷰",
+                5
+        );
+        saveReview(
+                targetUser,
+                otherBook,
+                "다른 도서 리뷰",
+                4
+        );
+        saveReview(
+                otherUser,
+                targetBook,
+                "다른 작성자 리뷰",
+                3
+        );
+
+        ReviewSearchRequest request = new ReviewSearchRequest(
+                targetUser.getId(),
+                targetBook.getId(),
+                null,
+                "createdAt",
+                "DESC",
+                null,
+                null,
+                50
+        );
+
+        List<Review> result =
+                reviewRepository.findAllByCursor(request);
+
+        assertThat(result)
+                .extracting(Review::getId)
+                .containsExactly(targetReview.getId());
+    }
+
+    @Test
+    void 평점_내림차순_커서_다음의_리뷰를_조회한다() {
+        User user1 = saveUser("작성자 1");
+        User user2 = saveUser("작성자 2");
+        User user3 = saveUser("작성자 3");
+
+        Book book1 = saveBook("도서 1");
+        Book book2 = saveBook("도서 2");
+        Book book3 = saveBook("도서 3");
+
+        saveReview(user1, book1, "5점 리뷰", 5);
+        saveReview(user2, book2, "4점 리뷰", 4);
+        Review ratingThreeReview =
+                saveReview(user3, book3, "3점 리뷰", 3);
+
+        ReviewSearchRequest request = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "rating",
+                "DESC",
+                "4",
+                null,
+                50
+        );
+
+        List<Review> result =
+                reviewRepository.findAllByCursor(request);
+
+        assertThat(result)
+                .extracting(Review::getId)
+                .containsExactly(ratingThreeReview.getId());
+    }
+
+    @Test
+    void 논리_삭제된_리뷰는_목록과_전체_개수에서_제외한다() {
+        User activeUser = saveUser("활성 작성자");
+        User deletedUser = saveUser("삭제 작성자");
+
+        Book activeBook = saveBook("활성 리뷰 도서");
+        Book deletedBook = saveBook("삭제 리뷰 도서");
+
+        Review activeReview = saveReview(
+                activeUser,
+                activeBook,
+                "활성 리뷰",
+                5
+        );
+
+        Review deletedReview = Review.create(
+                deletedUser,
+                deletedBook,
+                "삭제 리뷰",
+                4
+        );
+        deletedReview.softDelete();
+        reviewRepository.saveAndFlush(deletedReview);
+
+        ReviewSearchRequest request = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "createdAt",
+                "DESC",
+                null,
+                null,
+                50
+        );
+
+        List<Review> result =
+                reviewRepository.findAllByCursor(request);
+        long totalElements =
+                reviewRepository.countAll(request);
+
+        assertThat(result)
+                .extracting(Review::getId)
+                .containsExactly(activeReview.getId());
+        assertThat(totalElements).isEqualTo(1L);
+    }
+
+    private User saveUser(String nickname) {
+        return userRepository.save(
+                User.create(
+                        UUID.randomUUID() + "@example.com",
+                        nickname,
+                        "encodedPassword"
+                )
+        );
+    }
+
+    private Book saveBook(String title) {
+        return bookRepository.save(
+                new Book(
+                        title,
+                        "테스트 저자",
+                        "테스트 설명",
+                        "테스트 출판사",
+                        LocalDate.of(2026, 8, 21),
+                        UUID.randomUUID().toString()
+                )
+        );
+    }
+
+    private Review saveReview(
+            User user,
+            Book book,
+            String content,
+            int rating
+    ) {
+        return reviewRepository.saveAndFlush(
+                Review.create(
+                        user,
+                        book,
+                        content,
+                        rating
+                )
+        );
+    }
+}
