@@ -199,6 +199,72 @@ class ReviewLikeRepositoryTest {
                 .containsExactly(likedReview.getId());
     }
 
+    @Test
+    void 리뷰_ID로_좋아요를_모두_물리_삭제한다() {
+        User author = userRepository.save(
+                createUser("author@example.com", "작성자")
+        );
+        User firstRequester = userRepository.save(
+                createUser("first@example.com", "요청자1")
+        );
+        User secondRequester = userRepository.save(
+                createUser("second@example.com", "요청자2")
+        );
+
+        Book targetBook = bookRepository.save(createBook());
+        Book otherBook = bookRepository.save(createBook());
+
+        Review targetReview = reviewRepository.save(
+                Review.create(
+                        author,
+                        targetBook,
+                        "삭제 대상 리뷰",
+                        5
+                )
+        );
+
+        Review otherReview = reviewRepository.save(
+                Review.create(
+                        author,
+                        otherBook,
+                        "유지할 리뷰",
+                        4
+                )
+        );
+
+        reviewLikeRepository.save(
+                ReviewLike.create(
+                        targetReview,
+                        firstRequester
+                )
+        );
+        reviewLikeRepository.saveAndFlush(
+                ReviewLike.create(
+                        otherReview,
+                        secondRequester
+                )
+        );
+
+        reviewLikeRepository.deleteAllByReviewId(
+                targetReview.getId()
+        );
+        reviewLikeRepository.flush();
+
+        assertThat(
+                reviewLikeRepository.existsByReviewIdAndUserId(
+                        targetReview.getId(),
+                        firstRequester.getId()
+                )
+        ).isFalse();
+
+        assertThat(
+                reviewLikeRepository.existsByReviewIdAndUserId(
+                        otherReview.getId(),
+                        secondRequester.getId()
+                )
+        ).isTrue();
+    }
+
     private User createUser(
             String email,
             String nickname
