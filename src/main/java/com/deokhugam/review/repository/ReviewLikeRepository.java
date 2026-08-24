@@ -22,6 +22,8 @@ public interface ReviewLikeRepository
             UUID userId
     );
 
+    void deleteAllByReviewId(UUID reviewId);
+
     @Query(
             """
             SELECT reviewLike.review.id
