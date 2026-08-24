@@ -633,4 +633,78 @@ class CommentRepositoryTest {
         assertThat(count)
                 .isEqualTo(2L);
     }
+
+    @Test
+    @DisplayName("리뷰 물리 삭제를 위해 해당 리뷰의 댓글을 논리 삭제 여부와 관계없이 모두 삭제한다")
+    void deleteAllByReviewId() {
+
+        // given
+        UUID userId = UUID.randomUUID();
+
+        UUID targetReviewId = UUID.randomUUID();
+        UUID otherReviewId = UUID.randomUUID();
+
+        Comment activeComment = new Comment(
+                "정상 댓글",
+                userId,
+                targetReviewId
+        );
+
+        Comment softDeletedComment = new Comment(
+                "논리 삭제된 댓글",
+                userId,
+                targetReviewId
+        );
+
+        softDeletedComment.softDelete();
+
+        Comment otherReviewComment = new Comment(
+                "다른 리뷰 댓글",
+                userId,
+                otherReviewId
+        );
+
+        Comment savedActiveComment =
+                commentRepository.save(activeComment);
+
+        Comment savedSoftDeletedComment =
+                commentRepository.save(softDeletedComment);
+
+        Comment savedOtherReviewComment =
+                commentRepository.save(otherReviewComment);
+
+        commentRepository.flush();
+
+        UUID activeCommentId =
+                savedActiveComment.getId();
+
+        UUID softDeletedCommentId =
+                savedSoftDeletedComment.getId();
+
+        UUID otherReviewCommentId =
+                savedOtherReviewComment.getId();
+
+        entityManager.clear();
+
+        // when
+        commentRepository.deleteAllByReviewId(
+                targetReviewId
+        );
+
+        commentRepository.flush();
+        entityManager.clear();
+
+        // then
+        assertThat(
+                commentRepository.findById(activeCommentId)
+        ).isEmpty();
+
+        assertThat(
+                commentRepository.findById(softDeletedCommentId)
+        ).isEmpty();
+
+        assertThat(
+                commentRepository.findById(otherReviewCommentId)
+        ).isPresent();
+    }
 }
