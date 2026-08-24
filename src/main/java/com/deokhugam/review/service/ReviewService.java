@@ -38,4 +38,9 @@ public interface ReviewService {
             UUID reviewId,
             UUID requesterId
     );
+
+    void hardDelete(
+            UUID reviewId,
+            UUID requesterId
+    );
 }
