@@ -89,6 +89,19 @@ public class ReviewController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{reviewId}/hard")
+    public ResponseEntity<Void> hardDelete(
+            @PathVariable UUID reviewId,
+            @RequestHeader(REQUEST_USER_ID_HEADER) UUID requesterId
+    ) {
+        reviewService.hardDelete(
+                reviewId,
+                requesterId
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{reviewId}/like")
     public ResponseEntity<ReviewLikeResponse> toggleLike(
             @PathVariable UUID reviewId,
