@@ -347,6 +347,86 @@ class ReviewControllerTest {
     }
 
     @Test
+    void 본인의_리뷰를_물리_삭제하면_204를_반환한다()
+            throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        mockMvc.perform(delete(
+                        "/api/reviews/{reviewId}/hard",
+                        reviewId
+                ).header(
+                        REQUEST_USER_ID_HEADER,
+                        requesterId
+                ))
+                .andExpect(status().isNoContent());
+
+        verify(reviewService).hardDelete(
+                reviewId,
+                requesterId
+        );
+    }
+
+    @Test
+    void 존재하지_않는_리뷰를_물리_삭제하면_404를_반환한다()
+            throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        willThrow(
+                new ReviewNotFoundException(reviewId)
+        ).given(reviewService).hardDelete(
+                reviewId,
+                requesterId
+        );
+
+        mockMvc.perform(delete(
+                        "/api/reviews/{reviewId}/hard",
+                        reviewId
+                ).header(
+                        REQUEST_USER_ID_HEADER,
+                        requesterId
+                ))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code")
+                        .value("REVIEW_NOT_FOUND"))
+                .andExpect(jsonPath("$.details.reviewId")
+                        .value(reviewId.toString()));
+    }
+
+    @Test
+    void 다른_사용자의_리뷰를_물리_삭제하면_403을_반환한다()
+            throws Exception {
+        UUID reviewId = UUID.randomUUID();
+        UUID requesterId = UUID.randomUUID();
+
+        willThrow(
+                new ReviewAccessDeniedException(
+                        reviewId,
+                        requesterId
+                )
+        ).given(reviewService).hardDelete(
+                reviewId,
+                requesterId
+        );
+
+        mockMvc.perform(delete(
+                        "/api/reviews/{reviewId}/hard",
+                        reviewId
+                ).header(
+                        REQUEST_USER_ID_HEADER,
+                        requesterId
+                ))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code")
+                        .value("REVIEW_ACCESS_DENIED"))
+                .andExpect(jsonPath("$.details.reviewId")
+                        .value(reviewId.toString()))
+                .andExpect(jsonPath("$.details.requesterId")
+                        .value(requesterId.toString()));
+    }
+
+    @Test
     void 리뷰_좋아요를_토글하면_200과_좋아요_상태를_반환한다()
             throws Exception {
         UUID reviewId = UUID.randomUUID();
