@@ -64,8 +64,20 @@ public enum ErrorCode {
   ),
 
   INTERNAL_SERVER_ERROR(
-          HttpStatus.INTERNAL_SERVER_ERROR,
-          "서버 내부 오류가 발생했습니다."
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      "서버 내부 오류가 발생했습니다."
+  ),
+
+  // 알림 도메인 예외 추가
+  NOTIFICATION_NOT_FOUND(
+      HttpStatus.NOT_FOUND,
+          "알림을 찾을 수 없습니다."
+  ),
+
+  // 403 Forbidden 관련 에러
+  FORBIDDEN(
+      HttpStatus.FORBIDDEN,
+      "접근 권한이 없습니다."
   );
 
   private final HttpStatus status;
