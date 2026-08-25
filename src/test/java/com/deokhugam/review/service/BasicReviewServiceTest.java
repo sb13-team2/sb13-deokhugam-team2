@@ -11,7 +11,9 @@ import com.deokhugam.book.entity.Book;
 import com.deokhugam.book.exception.BookNotFoundException;
 import com.deokhugam.book.repository.BookRepository;
 import com.deokhugam.comment.repository.CommentRepository;
+import com.deokhugam.dashboard.repository.ReviewRankingRepository;
 import com.deokhugam.global.storage.Storage;
+import com.deokhugam.notifications.repository.NotificationRepository;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
@@ -53,6 +55,12 @@ class BasicReviewServiceTest {
 
     @Mock
     private CommentRepository commentRepository;
+
+    @Mock
+    private NotificationRepository notificationRepository;
+
+    @Mock
+    private ReviewRankingRepository reviewRankingRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -877,13 +885,19 @@ class BasicReviewServiceTest {
 
         InOrder deletionOrder = inOrder(
                 commentRepository,
+                notificationRepository,
                 reviewLikeRepository,
+                reviewRankingRepository,
                 reviewRepository
         );
 
         deletionOrder.verify(commentRepository)
                 .deleteAllByReviewId(reviewId);
+        deletionOrder.verify(notificationRepository)
+                .deleteAllByReviewId(reviewId);
         deletionOrder.verify(reviewLikeRepository)
+                .deleteAllByReviewId(reviewId);
+        deletionOrder.verify(reviewRankingRepository)
                 .deleteAllByReviewId(reviewId);
         deletionOrder.verify(reviewRepository)
                 .delete(review);
@@ -904,7 +918,11 @@ class BasicReviewServiceTest {
 
         verify(commentRepository, never())
                 .deleteAllByReviewId(any(UUID.class));
+        verify(notificationRepository, never())
+                .deleteAllByReviewId(any(UUID.class));
         verify(reviewLikeRepository, never())
+                .deleteAllByReviewId(any(UUID.class));
+        verify(reviewRankingRepository, never())
                 .deleteAllByReviewId(any(UUID.class));
         verify(reviewRepository, never())
                 .delete(any(Review.class));
@@ -935,7 +953,11 @@ class BasicReviewServiceTest {
 
         verify(commentRepository, never())
                 .deleteAllByReviewId(any(UUID.class));
+        verify(notificationRepository, never())
+                .deleteAllByReviewId(any(UUID.class));
         verify(reviewLikeRepository, never())
+                .deleteAllByReviewId(any(UUID.class));
+        verify(reviewRankingRepository, never())
                 .deleteAllByReviewId(any(UUID.class));
         verify(reviewRepository, never())
                 .delete(any(Review.class));
