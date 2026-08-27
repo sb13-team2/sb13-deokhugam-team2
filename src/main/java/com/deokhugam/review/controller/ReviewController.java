@@ -1,5 +1,6 @@
 package com.deokhugam.review.controller;
 
+import com.deokhugam.review.controller.doc.ReviewControllerDoc;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
@@ -17,13 +18,14 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/reviews")
 @RequiredArgsConstructor
-public class ReviewController {
+public class ReviewController implements ReviewControllerDoc {
 
     private static final String REQUEST_USER_ID_HEADER =
             "Deokhugam-Request-User-ID";
 
     private final ReviewService reviewService;
 
+    @Override
     @PostMapping
     public ResponseEntity<ReviewDetailResponse> create(
             @Valid @RequestBody ReviewCreateRequest request
@@ -35,6 +37,7 @@ public class ReviewController {
                 .body(response);
     }
 
+    @Override
     @GetMapping
     public ResponseEntity<ReviewListResponse> findAll(
             @Valid @ModelAttribute ReviewSearchRequest request,
@@ -48,6 +51,7 @@ public class ReviewController {
         return ResponseEntity.ok(response);
     }
 
+    @Override
     @GetMapping("/{reviewId}")
     public ResponseEntity<ReviewDetailResponse> findById(
             @PathVariable UUID reviewId,
@@ -61,6 +65,7 @@ public class ReviewController {
         return ResponseEntity.ok(response);
     }
 
+    @Override
     @PatchMapping("/{reviewId}")
     public ResponseEntity<ReviewDetailResponse> update(
             @PathVariable UUID reviewId,
@@ -76,6 +81,7 @@ public class ReviewController {
         return ResponseEntity.ok(response);
     }
 
+    @Override
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<Void> softDelete(
             @PathVariable UUID reviewId,
@@ -89,6 +95,7 @@ public class ReviewController {
         return ResponseEntity.noContent().build();
     }
 
+    @Override
     @DeleteMapping("/{reviewId}/hard")
     public ResponseEntity<Void> hardDelete(
             @PathVariable UUID reviewId,
@@ -102,6 +109,7 @@ public class ReviewController {
         return ResponseEntity.noContent().build();
     }
 
+    @Override
     @PostMapping("/{reviewId}/like")
     public ResponseEntity<ReviewLikeResponse> toggleLike(
             @PathVariable UUID reviewId,
