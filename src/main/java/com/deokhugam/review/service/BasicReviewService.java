@@ -291,14 +291,16 @@ public class BasicReviewService implements ReviewService {
         reviewLikeRepository.save(reviewLike);
         review.increaseLikeCount();
 
-        notificationService.createNotification(
-                review.getUser(),
-                review,
-                REVIEW_LIKE_NOTIFICATION_MESSAGE.formatted(
-                        requester.getNickname()
-                ),
-                NotificationType.REVIEW_LIKE
-        );
+        if (!review.getUser().getId().equals(requesterId)) {
+            notificationService.createNotification(
+                    review.getUser(),
+                    review,
+                    REVIEW_LIKE_NOTIFICATION_MESSAGE.formatted(
+                            requester.getNickname()
+                    ),
+                    NotificationType.REVIEW_LIKE
+            );
+        }
 
         return new ReviewLikeResponse(
                 reviewId,
