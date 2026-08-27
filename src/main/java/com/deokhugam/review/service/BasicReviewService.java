@@ -7,7 +7,9 @@ import com.deokhugam.comment.repository.CommentRepository;
 import com.deokhugam.dashboard.repository.ReviewRankingRepository;
 import com.deokhugam.global.exception.ErrorCode;
 import com.deokhugam.global.storage.Storage;
+import com.deokhugam.notification.entity.NotificationType;
 import com.deokhugam.notification.repository.NotificationRepository;
+import com.deokhugam.notification.service.NotificationService;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
@@ -45,6 +47,7 @@ public class BasicReviewService implements ReviewService {
     private final BookRepository bookRepository;
     private final CommentRepository commentRepository;
     private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
     private final ReviewRankingRepository reviewRankingRepository;
     private final Storage storage;
 
@@ -285,6 +288,13 @@ public class BasicReviewService implements ReviewService {
 
         reviewLikeRepository.save(reviewLike);
         review.increaseLikeCount();
+
+        notificationService.createNotification(
+                review.getUser(),
+                review,
+                requester.getNickname() + "님이 좋아요를 눌렀습니다.",
+                NotificationType.REVIEW_LIKE
+        );
 
         return new ReviewLikeResponse(
                 reviewId,
