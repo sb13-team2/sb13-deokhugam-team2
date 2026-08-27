@@ -975,6 +975,43 @@ class BasicReviewServiceTest {
                 .delete(any(Review.class));
     }
 
+    @Test
+    void 본인이_자기_리뷰에_좋아요를_추가하면_알림을_생성하지_않는다() {
+        UUID requesterId = UUID.randomUUID();
+        UUID reviewId = UUID.randomUUID();
+        UUID bookId = UUID.randomUUID();
+
+        User requester = createUser(requesterId);
+        Book book = createBook(bookId);
+        Review review = createReview(
+                reviewId,
+                requester,
+                book
+        );
+
+        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+                .willReturn(Optional.of(review));
+
+        given(userRepository.findByIdAndDeletedAtIsNull(requesterId))
+                .willReturn(Optional.of(requester));
+
+        given(reviewLikeRepository.findByReviewIdAndUserId(
+                reviewId,
+                requesterId
+        )).willReturn(Optional.empty());
+
+        ReviewLikeResponse response = reviewService.toggleLike(
+                reviewId,
+                requesterId
+        );
+
+        assertThat(response.liked()).isTrue();
+        assertThat(review.getLikeCount()).isEqualTo(1);
+
+        verify(reviewLikeRepository).save(any(ReviewLike.class));
+        verifyNoInteractions(notificationService);
+    }
+
     private Review createReview(
             UUID reviewId,
             User user,
