@@ -41,6 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class BasicReviewService implements ReviewService {
 
+    private static final String REVIEW_LIKE_NOTIFICATION_MESSAGE =
+            "%s님이 좋아요를 눌렀습니다.";
     private final ReviewRepository reviewRepository;
     private final ReviewLikeRepository reviewLikeRepository;
     private final UserRepository userRepository;
@@ -292,7 +294,9 @@ public class BasicReviewService implements ReviewService {
         notificationService.createNotification(
                 review.getUser(),
                 review,
-                requester.getNickname() + "님이 좋아요를 눌렀습니다.",
+                REVIEW_LIKE_NOTIFICATION_MESSAGE.formatted(
+                        requester.getNickname()
+                ),
                 NotificationType.REVIEW_LIKE
         );
 
