@@ -13,7 +13,9 @@ import com.deokhugam.book.repository.BookRepository;
 import com.deokhugam.comment.repository.CommentRepository;
 import com.deokhugam.dashboard.repository.ReviewRankingRepository;
 import com.deokhugam.global.storage.Storage;
+import com.deokhugam.notification.entity.NotificationType;
 import com.deokhugam.notification.repository.NotificationRepository;
+import com.deokhugam.notification.service.NotificationService;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
@@ -58,6 +60,9 @@ class BasicReviewServiceTest {
 
     @Mock
     private NotificationRepository notificationRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     @Mock
     private ReviewRankingRepository reviewRankingRepository;
@@ -602,6 +607,12 @@ class BasicReviewServiceTest {
         assertThat(review.getLikeCount()).isEqualTo(1);
 
         verify(reviewLikeRepository).save(any(ReviewLike.class));
+        verify(notificationService).createNotification(
+                author,
+                review,
+                requester.getNickname() + "님이 좋아요를 눌렀습니다.",
+                NotificationType.REVIEW_LIKE
+        );
     }
 
     @Test
