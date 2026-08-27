@@ -44,11 +44,12 @@ public class CommentServiceImpl implements CommentService {
         Review review =
                 findActiveReview(request.reviewId());
 
-        Comment comment = new Comment(
-                request.content(),
-                commenter.getId(),
-                review.getId()
-        );
+        Comment comment =
+                new Comment(
+                        request.content(),
+                        commenter.getId(),
+                        review.getId()
+                );
 
         Comment savedComment =
                 commentRepository.save(comment);
