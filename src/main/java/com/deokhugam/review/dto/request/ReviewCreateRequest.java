@@ -1,11 +1,13 @@
 package com.deokhugam.review.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
+@Schema(description = "리뷰 정보")
 public record ReviewCreateRequest(
 
         @NotNull(message = "도서 ID는 필수입니다.")

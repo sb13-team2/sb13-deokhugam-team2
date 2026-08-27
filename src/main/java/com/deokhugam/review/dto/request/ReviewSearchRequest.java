@@ -1,13 +1,13 @@
 package com.deokhugam.review.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
-import org.springframework.format.annotation.DateTimeFormat;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 
 public record ReviewSearchRequest(
 
@@ -56,6 +56,7 @@ public record ReviewSearchRequest(
         }
     }
 
+    @Schema(hidden = true)
     @AssertTrue(message = "커서 형식이 올바르지 않습니다.")
     public boolean isCursorValid() {
         if (cursor == null || cursor.isBlank()) {
@@ -82,6 +83,7 @@ public record ReviewSearchRequest(
         }
     }
 
+    @Schema(hidden = true)
     @AssertTrue(
             message = "평점 정렬에서 cursor를 사용하는 경우 after가 필요합니다."
     )
