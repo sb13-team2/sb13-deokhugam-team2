@@ -655,6 +655,7 @@ class BasicReviewServiceTest {
         assertThat(review.getLikeCount()).isZero();
 
         verify(reviewLikeRepository).delete(reviewLike);
+        verifyNoInteractions(notificationService);
     }
 
     @Test
