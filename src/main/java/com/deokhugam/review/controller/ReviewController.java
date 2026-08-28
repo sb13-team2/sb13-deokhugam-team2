@@ -8,10 +8,9 @@ import com.deokhugam.review.dto.response.ReviewDetailResponse;
 import com.deokhugam.review.dto.response.ReviewLikeResponse;
 import com.deokhugam.review.dto.response.ReviewListResponse;
 import com.deokhugam.review.service.ReviewService;
-import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +28,7 @@ public class ReviewController implements ReviewControllerDoc {
     @Override
     @PostMapping
     public ResponseEntity<ReviewDetailResponse> create(
-            @Valid @RequestBody ReviewCreateRequest request
+            @RequestBody ReviewCreateRequest request
     ) {
         ReviewDetailResponse response = reviewService.create(request);
 
@@ -41,8 +40,8 @@ public class ReviewController implements ReviewControllerDoc {
     @Override
     @GetMapping
     public ResponseEntity<ReviewListResponse> findAll(
-            @ParameterObject
-            @Valid @ModelAttribute ReviewSearchRequest request,
+            @Parameter(hidden = true)
+            @ModelAttribute ReviewSearchRequest request,
             @RequestHeader(REQUEST_USER_ID_HEADER) UUID requesterId
     ) {
         ReviewListResponse response = reviewService.findAll(
@@ -72,7 +71,7 @@ public class ReviewController implements ReviewControllerDoc {
     public ResponseEntity<ReviewDetailResponse> update(
             @PathVariable UUID reviewId,
             @RequestHeader(REQUEST_USER_ID_HEADER) UUID requesterId,
-            @Valid @RequestBody ReviewUpdateRequest request
+            @RequestBody ReviewUpdateRequest request
     ) {
         ReviewDetailResponse response = reviewService.update(
                 reviewId,
