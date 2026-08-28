@@ -9,4 +9,7 @@ public interface CommentRepository
         CommentRepositoryCustom {
 
     void deleteAllByReviewId(UUID reviewId);
+
+    // 유저가 남긴 댓글 전체 삭제를 위해 추가
+    void deleteAllByUserId(UUID userId);
 }

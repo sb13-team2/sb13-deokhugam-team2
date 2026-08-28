@@ -16,6 +16,9 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
   @Query("delete from Notification n where n.review.id = :reviewId")
   void deleteAllByReviewId(@Param("reviewId") UUID reviewId);
 
+  // 유저가 받은 알림 전체 삭제를 위해 추가
+  void deleteAllByUserId(UUID userId);
+
   //user의 안읽은(isConfirmed=false) 알림만 모두 가져오는 퀴리 메서드
   List<Notification> findAllByUserIdAndIsConfirmedFalse(UUID userId);
 
