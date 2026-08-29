@@ -33,6 +33,7 @@ public class BookController implements BookControllerDoc {
 
   private final BookService bookService;
 
+  @Override
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<BookDto> create(
       @RequestPart("bookData") @Valid BookCreateRequest request,
@@ -43,6 +44,7 @@ public class BookController implements BookControllerDoc {
     return ResponseEntity.status(HttpStatus.CREATED).body(bookDto);
   }
 
+  @Override
   @PostMapping(
       value = "/isbn/ocr",
       consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -55,6 +57,7 @@ public class BookController implements BookControllerDoc {
     return ResponseEntity.ok(isbn);
   }
 
+  @Override
   @GetMapping("/{bookId}")
   public ResponseEntity<BookDto> findById(
       @PathVariable UUID bookId) {
@@ -64,6 +67,7 @@ public class BookController implements BookControllerDoc {
     return ResponseEntity.ok(bookDto);
   }
 
+  @Override
   @GetMapping
   public ResponseEntity<CursorPageResponse<BookDto>> findAll(
       @Valid @ModelAttribute BookSearchRequest request
@@ -73,6 +77,7 @@ public class BookController implements BookControllerDoc {
     return ResponseEntity.ok(response);
   }
 
+  @Override
   @PatchMapping(value = "/{bookId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<BookDto> update(
       @PathVariable UUID bookId,
@@ -84,6 +89,7 @@ public class BookController implements BookControllerDoc {
     return ResponseEntity.ok(bookDto);
   }
 
+  @Override
   @DeleteMapping("/{bookId}")
   public ResponseEntity<Void> delete(
       @PathVariable UUID bookId
@@ -93,6 +99,7 @@ public class BookController implements BookControllerDoc {
     return ResponseEntity.noContent().build();
   }
 
+  @Override
   @DeleteMapping("/{bookId}/hard")
   public ResponseEntity<Void> hardDelete(
       @PathVariable UUID bookId
@@ -101,6 +108,7 @@ public class BookController implements BookControllerDoc {
     return ResponseEntity.noContent().build();
   }
 
+  @Override
   @GetMapping("/info")
   public ResponseEntity<BookInfoResponse> findBookInfoByIsbn(
       @RequestParam String isbn) {
