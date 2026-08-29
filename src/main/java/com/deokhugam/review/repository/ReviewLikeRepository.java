@@ -1,10 +1,9 @@
 package com.deokhugam.review.repository;
 
 import com.deokhugam.review.entity.ReviewLike;
-import java.util.Collection;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+
+import java.util.*;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -39,4 +38,6 @@ public interface ReviewLikeRepository
 
     // 유저가 누른 좋아요 전체 삭제를 위해 추가
     void deleteAllByUserId(UUID userId);
+    // 유저가 누른 좋아요 전체 조회
+    List<ReviewLike> findAllByUserId(UUID userId);
 }

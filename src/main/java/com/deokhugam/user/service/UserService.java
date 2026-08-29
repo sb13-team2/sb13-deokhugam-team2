@@ -1,11 +1,13 @@
 package com.deokhugam.user.service;
 
+import com.deokhugam.comment.entity.Comment;
 import com.deokhugam.comment.repository.CommentRepository;
 import com.deokhugam.dashboard.repository.ReviewRankingRepository;
 import com.deokhugam.dashboard.repository.UserRankingRepository;
 import com.deokhugam.global.exception.ErrorCode;
 import com.deokhugam.notification.repository.NotificationRepository;
 import com.deokhugam.review.entity.Review;
+import com.deokhugam.review.entity.ReviewLike;
 import com.deokhugam.review.repository.ReviewLikeRepository;
 import com.deokhugam.review.repository.ReviewRepository;
 import com.deokhugam.user.entity.User;
@@ -109,13 +111,26 @@ public class UserService {
         // 리뷰 물리 삭제
         reviewRepository.deleteAll(userReviews);
 
-        // 2. 유저 본인이 남긴 타인의 리뷰에 대한 좋아요, 댓글, 알림, 랭킹 정보 삭제
+        // 2. 다른 사람의 리뷰에 남긴 좋아요와 댓글 수치 차감
+        List<ReviewLike> userLikes = reviewLikeRepository.findAllByUserId(userId);
+        for (ReviewLike like : userLikes) {
+            like.getReview().decreaseLikeCount();
+        }
+
+        // 댓글 수 차감
+        List<Comment> userComments = commentRepository.findAllByUserId(userId);
+        for (Comment comment : userComments) {
+            reviewRepository.findByIdAndDeletedAtIsNull(comment.getReviewId())
+                    .ifPresent(Review::decreaseCommentCount);
+        }
+
+        // 3. 유저 본인이 남긴 타인의 리뷰에 대한 좋아요, 댓글, 알림, 랭킹 정보 삭제
         reviewLikeRepository.deleteAllByUserId(userId);
         commentRepository.deleteAllByUserId(userId);
         notificationRepository.deleteAllByUserId(userId);
         userRankingRepository.deleteAllByUserId(userId);
 
-        // 3. 최종적으로 유저 물리 삭제
+        // 4. 최종적으로 유저 물리 삭제
         userRepository.deleteById(userId);
     }
 
