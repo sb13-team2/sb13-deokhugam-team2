@@ -9,8 +9,10 @@ import com.deokhugam.notification.entity.Notification;
 import com.deokhugam.notification.entity.NotificationType;
 import com.deokhugam.notification.repository.NotificationRepository;
 import com.deokhugam.review.entity.Review;
+import com.deokhugam.review.repository.ReviewRepository;
 import com.deokhugam.user.entity.User;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationService {
 
   private final NotificationRepository notificationRepository;
+  private final ReviewRepository reviewRepository;
 
   @Transactional
   public NotificationDto readNotification(UUID notificationId, UUID userId, NotificationUpdateRequest request) {
@@ -51,10 +54,10 @@ public class NotificationService {
 
   @Transactional
   public void readAllNotification(UUID userId){
-    List<Notification> unreadNotificarion = notificationRepository.findAllByUserIdAndIsConfirmedFalse(userId);
+    List<Notification> unreadNotification = notificationRepository.findAllByUserIdAndIsConfirmedFalse(userId);
 
     // 가져온 알림들을 하나씩 꺼내어 무조건 읽음(true)으로 바꿉니다.
-    for(Notification notifications : unreadNotificarion) {
+    for(Notification notifications : unreadNotification) {
       notifications.updateConfirmStatus(true);
     }
   }
@@ -139,5 +142,29 @@ public class NotificationService {
         savedNotification.getUpdatedAt(),
         savedNotification.getType()
     );
+  }
+
+  // 대시보드에서 1~10위 리뷰 ID들을 주면, 해당 리뷰 작성자들에게 알림을 생성.
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+  public void createTopReviewNotifications(List<UUID> topReviewIds) {
+    // 1. 리뷰 ID들로 리뷰 엔티티들을 DB에서 한 번에 싹 다 가져옵니다.
+    List<Review> topReviews = reviewRepository.findAllById(topReviewIds);
+
+    // 2. 알림 엔티티들을 담을 빈 리스트를 만듭니다.
+    List<Notification> notificationsToSave = new ArrayList<>();
+
+    // 3. 가져온 리뷰들을 for문으로 돌면서 알림(Notification) 객체를 만들고 리스트에 넣습니다.
+    for (Review review : topReviews) {
+      Notification notification = Notification.builder()
+          .user(review.getUser()) // 리뷰 작성자에게 알림을 보냅니다!
+          .review(review)
+          .content("축하합니다! 작성하신 리뷰가 인기 TOP 리뷰에 선정되었습니다! 🎉")
+          .type(NotificationType.TOP_REVIEW)
+          .build();
+      notificationsToSave.add(notification);
+    }
+
+    // 4. 만들어진 10개의 알림을 DB에 한 방에 저장!
+    notificationRepository.saveAll(notificationsToSave);
   }
 }
