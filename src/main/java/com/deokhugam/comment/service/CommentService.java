@@ -24,10 +24,6 @@ public interface CommentService {
             UUID requesterId
     );
 
-    void deleteAllByUserId(
-            UUID userId
-    );
-
     CommentListResponse findAll(
             CommentSearchRequest request
     );

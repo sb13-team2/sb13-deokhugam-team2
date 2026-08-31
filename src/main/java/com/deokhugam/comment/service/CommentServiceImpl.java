@@ -124,24 +124,7 @@ public class CommentServiceImpl implements CommentService {
         }
     }
 
-    @Override
-    @Transactional
-    public void deleteAllByUserId(
-            UUID userId
-    ) {
-        List<Comment> comments =
-                commentRepository.findAllByUserId(userId);
 
-        for (Comment comment : comments) {
-            if (!comment.isDeleted()) {
-                commentRepository.decreaseReviewCommentCount(
-                        comment.getReviewId()
-                );
-            }
-        }
-
-        commentRepository.deleteAllByUserId(userId);
-    }
 
     @Override
     public CommentListResponse findAll(
