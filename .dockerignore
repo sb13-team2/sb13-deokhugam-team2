@@ -9,3 +9,5 @@ out
 .env.*
 .DS_Store
 storage/
+application-secret.yml
+application-*.secret.yml

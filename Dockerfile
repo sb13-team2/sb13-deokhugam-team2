@@ -15,7 +15,9 @@ FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 RUN groupadd --system spring \
-    && useradd --system --gid spring spring
+    && useradd --system --gid spring spring \
+    && mkdir -p /app/storage \
+    && chown -R spring:spring /app/storage
 
 COPY --from=builder --chown=spring:spring /app/app.jar app.jar
 
