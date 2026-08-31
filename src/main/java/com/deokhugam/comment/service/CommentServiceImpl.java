@@ -50,6 +50,10 @@ public class CommentServiceImpl implements CommentService {
         Comment savedComment =
                 commentRepository.save(comment);
 
+        commentRepository.increaseReviewCommentCount(
+                review.getId()
+        );
+
         createCommentNotification(
                 review,
                 request.userId()
@@ -92,7 +96,30 @@ public class CommentServiceImpl implements CommentService {
 
         if (!comment.isDeleted()) {
             comment.softDelete();
+
+            commentRepository.decreaseReviewCommentCount(
+                    comment.getReviewId()
+            );
         }
+    }
+
+    @Override
+    @Transactional
+    public void deleteAllByUserId(
+            UUID userId
+    ) {
+        List<Comment> comments =
+                commentRepository.findAllByUserId(userId);
+
+        for (Comment comment : comments) {
+            if (!comment.isDeleted()) {
+                commentRepository.decreaseReviewCommentCount(
+                        comment.getReviewId()
+                );
+            }
+        }
+
+        commentRepository.deleteAllByUserId(userId);
     }
 
     @Override
