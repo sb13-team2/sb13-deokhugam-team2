@@ -28,6 +28,7 @@ import com.deokhugam.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -66,7 +67,7 @@ class CommentServiceImplTest {
     }
 
     @Test
-    @DisplayName("댓글을 등록하면 작성자 닉네임이 포함된 응답을 반환한다")
+    @DisplayName("활성 사용자가 다른 사용자의 리뷰에 댓글을 등록하면 알림을 생성한다")
     void createComment() {
 
         // given
@@ -81,11 +82,8 @@ class CommentServiceImplTest {
                         "테스트 댓글입니다."
                 );
 
-        User commentWriter =
+        User commenter =
                 mock(User.class);
-
-        when(commentWriter.getNickname())
-                .thenReturn("테스트유저");
 
         User reviewWriter =
                 mock(User.class);
@@ -93,11 +91,28 @@ class CommentServiceImplTest {
         Review review =
                 mock(Review.class);
 
-        when(reviewWriter.getId())
-                .thenReturn(reviewWriterId);
+        when(commenter.getId())
+                .thenReturn(userId);
+
+        when(commenter.getNickname())
+                .thenReturn("테스트유저");
+
+        when(review.getId())
+                .thenReturn(reviewId);
 
         when(review.getUser())
                 .thenReturn(reviewWriter);
+
+        when(reviewWriter.getId())
+                .thenReturn(reviewWriterId);
+
+        when(
+                userRepository.findByIdAndDeletedAtIsNull(
+                        userId
+                )
+        ).thenReturn(
+                Optional.of(commenter)
+        );
 
         when(
                 reviewRepository.findByIdAndDeletedAtIsNull(
@@ -105,12 +120,6 @@ class CommentServiceImplTest {
                 )
         ).thenReturn(
                 Optional.of(review)
-        );
-
-        when(
-                userRepository.findById(userId)
-        ).thenReturn(
-                Optional.of(commentWriter)
         );
 
         when(
@@ -152,72 +161,8 @@ class CommentServiceImplTest {
     }
 
     @Test
-    @DisplayName("다른 사용자가 리뷰에 댓글을 작성하면 리뷰 작성자에게 알림을 생성한다")
-    void createCommentCreatesNotification() {
-
-        // given
-        UUID commenterId = UUID.randomUUID();
-        UUID reviewWriterId = UUID.randomUUID();
-        UUID reviewId = UUID.randomUUID();
-
-        CommentCreateRequest request =
-                new CommentCreateRequest(
-                        commenterId,
-                        reviewId,
-                        "댓글 내용"
-                );
-
-        User reviewWriter =
-                mock(User.class);
-
-        Review review =
-                mock(Review.class);
-
-        when(reviewWriter.getId())
-                .thenReturn(reviewWriterId);
-
-        when(review.getUser())
-                .thenReturn(reviewWriter);
-
-        when(
-                reviewRepository.findByIdAndDeletedAtIsNull(
-                        reviewId
-                )
-        ).thenReturn(
-                Optional.of(review)
-        );
-
-        when(
-                commentRepository.save(
-                        any(Comment.class)
-                )
-        ).thenAnswer(
-                invocation ->
-                        invocation.getArgument(0)
-        );
-
-        when(
-                userRepository.findById(commenterId)
-        ).thenReturn(
-                Optional.empty()
-        );
-
-        // when
-        commentService.create(request);
-
-        // then
-        verify(notificationService)
-                .createNotification(
-                        reviewWriter,
-                        review,
-                        "회원님의 리뷰에 새로운 댓글이 등록되었습니다.",
-                        NotificationType.NEW_COMMENT
-                );
-    }
-
-    @Test
-    @DisplayName("리뷰 작성자가 자신의 리뷰에 댓글을 작성하면 알림을 생성하지 않는다")
-    void createCommentOnOwnReviewDoesNotCreateNotification() {
+    @DisplayName("활성 상태가 아닌 사용자는 댓글을 등록할 수 없다")
+    void createCommentWithInactiveUser() {
 
         // given
         UUID userId = UUID.randomUUID();
@@ -227,48 +172,48 @@ class CommentServiceImplTest {
                 new CommentCreateRequest(
                         userId,
                         reviewId,
-                        "내 리뷰에 작성한 댓글"
+                        "댓글 내용"
                 );
 
-        User reviewWriter =
-                mock(User.class);
-
-        Review review =
-                mock(Review.class);
-
-        when(reviewWriter.getId())
-                .thenReturn(userId);
-
-        when(review.getUser())
-                .thenReturn(reviewWriter);
-
         when(
-                reviewRepository.findByIdAndDeletedAtIsNull(
-                        reviewId
+                userRepository.findByIdAndDeletedAtIsNull(
+                        userId
                 )
-        ).thenReturn(
-                Optional.of(review)
-        );
-
-        when(
-                commentRepository.save(
-                        any(Comment.class)
-                )
-        ).thenAnswer(
-                invocation ->
-                        invocation.getArgument(0)
-        );
-
-        when(
-                userRepository.findById(userId)
         ).thenReturn(
                 Optional.empty()
         );
 
-        // when
-        commentService.create(request);
+        // when & then
+        assertThatThrownBy(
+                () -> commentService.create(request)
+        )
+                .isInstanceOf(
+                        DeokhugamException.class
+                )
+                .satisfies(exception -> {
 
-        // then
+                    DeokhugamException e =
+                            (DeokhugamException) exception;
+
+                    assertThat(
+                            e.getErrorCode()
+                    ).isEqualTo(
+                            ErrorCode.USER_NOT_FOUND
+                    );
+                });
+
+        verify(
+                reviewRepository,
+                never()
+        ).findByIdAndDeletedAtIsNull(
+                any(UUID.class)
+        );
+
+        verify(
+                commentRepository,
+                never()
+        ).save(any(Comment.class));
+
         verify(
                 notificationService,
                 never()
@@ -295,6 +240,17 @@ class CommentServiceImplTest {
                         "댓글 내용"
                 );
 
+        User commenter =
+                mock(User.class);
+
+        when(
+                userRepository.findByIdAndDeletedAtIsNull(
+                        userId
+                )
+        ).thenReturn(
+                Optional.of(commenter)
+        );
+
         when(
                 reviewRepository.findByIdAndDeletedAtIsNull(
                         reviewId
@@ -315,6 +271,83 @@ class CommentServiceImplTest {
                 commentRepository,
                 never()
         ).save(any(Comment.class));
+
+        verify(
+                notificationService,
+                never()
+        ).createNotification(
+                any(User.class),
+                any(Review.class),
+                anyString(),
+                any(NotificationType.class)
+        );
+    }
+
+    @Test
+    @DisplayName("리뷰 작성자가 자신의 리뷰에 댓글을 작성하면 알림을 생성하지 않는다")
+    void createCommentOnOwnReviewDoesNotCreateNotification() {
+
+        // given
+        UUID userId = UUID.randomUUID();
+        UUID reviewId = UUID.randomUUID();
+
+        CommentCreateRequest request =
+                new CommentCreateRequest(
+                        userId,
+                        reviewId,
+                        "내 리뷰에 작성한 댓글"
+                );
+
+        User commenter =
+                mock(User.class);
+
+        Review review =
+                mock(Review.class);
+
+        when(commenter.getId())
+                .thenReturn(userId);
+
+        when(commenter.getNickname())
+                .thenReturn("작성자");
+
+        when(review.getId())
+                .thenReturn(reviewId);
+
+        when(review.getUser())
+                .thenReturn(commenter);
+
+        when(
+                userRepository.findByIdAndDeletedAtIsNull(
+                        userId
+                )
+        ).thenReturn(
+                Optional.of(commenter)
+        );
+
+        when(
+                reviewRepository.findByIdAndDeletedAtIsNull(
+                        reviewId
+                )
+        ).thenReturn(
+                Optional.of(review)
+        );
+
+        when(
+                commentRepository.save(
+                        any(Comment.class)
+                )
+        ).thenAnswer(
+                invocation ->
+                        invocation.getArgument(0)
+        );
+
+        // when
+        CommentResponse response =
+                commentService.create(request);
+
+        // then
+        assertThat(response.userNickname())
+                .isEqualTo("작성자");
 
         verify(
                 notificationService,
@@ -763,14 +796,11 @@ class CommentServiceImplTest {
         User user =
                 mock(User.class);
 
+        when(user.getId())
+                .thenReturn(userId);
+
         when(user.getNickname())
                 .thenReturn("작성자");
-
-        when(
-                userRepository.findById(userId)
-        ).thenReturn(
-                Optional.of(user)
-        );
 
         when(
                 commentRepository.findAllByCursor(request)
@@ -780,6 +810,18 @@ class CommentServiceImplTest {
                         second,
                         third
                 )
+        );
+
+        /*
+         * 실제 응답에는 limit = 2개가 사용되고,
+         * 두 댓글의 작성자는 동일하므로 한 번에 조회한다.
+         */
+        when(
+                userRepository.findAllById(
+                        Set.of(userId)
+                )
+        ).thenReturn(
+                List.of(user)
         );
 
         when(
@@ -793,6 +835,18 @@ class CommentServiceImplTest {
         // then
         assertThat(response.content())
                 .hasSize(2);
+
+        assertThat(
+                response.content()
+                        .get(0)
+                        .userNickname()
+        ).isEqualTo("작성자");
+
+        assertThat(
+                response.content()
+                        .get(1)
+                        .userNickname()
+        ).isEqualTo("작성자");
 
         assertThat(response.size())
                 .isEqualTo(2);
@@ -812,6 +866,209 @@ class CommentServiceImplTest {
                 .isEqualTo(
                         secondCreatedAt
                 );
+
+        verify(userRepository)
+                .findAllById(
+                        Set.of(userId)
+                );
+
+        verify(
+                userRepository,
+                never()
+        ).findById(userId);
+    }
+
+    @Test
+    @DisplayName("댓글 목록의 여러 작성자를 한 번의 일괄 조회로 가져온다")
+    void findAllLoadsUsersInBatch() {
+
+        // given
+        UUID reviewId = UUID.randomUUID();
+        UUID firstUserId = UUID.randomUUID();
+        UUID secondUserId = UUID.randomUUID();
+
+        CommentSearchRequest request =
+                new CommentSearchRequest(
+                        reviewId,
+                        "DESC",
+                        null,
+                        null,
+                        10
+                );
+
+        Comment first =
+                new Comment(
+                        "첫 번째 댓글",
+                        firstUserId,
+                        reviewId
+                );
+
+        Comment second =
+                new Comment(
+                        "두 번째 댓글",
+                        secondUserId,
+                        reviewId
+                );
+
+        User firstUser =
+                mock(User.class);
+
+        User secondUser =
+                mock(User.class);
+
+        when(firstUser.getId())
+                .thenReturn(firstUserId);
+
+        when(firstUser.getNickname())
+                .thenReturn("사용자1");
+
+        when(secondUser.getId())
+                .thenReturn(secondUserId);
+
+        when(secondUser.getNickname())
+                .thenReturn("사용자2");
+
+        when(
+                commentRepository.findAllByCursor(request)
+        ).thenReturn(
+                List.of(
+                        first,
+                        second
+                )
+        );
+
+        when(
+                userRepository.findAllById(
+                        Set.of(
+                                firstUserId,
+                                secondUserId
+                        )
+                )
+        ).thenReturn(
+                List.of(
+                        firstUser,
+                        secondUser
+                )
+        );
+
+        when(
+                commentRepository.countAll(request)
+        ).thenReturn(2L);
+
+        // when
+        CommentListResponse response =
+                commentService.findAll(request);
+
+        // then
+        assertThat(response.content())
+                .hasSize(2);
+
+        assertThat(
+                response.content()
+                        .get(0)
+                        .userNickname()
+        ).isEqualTo("사용자1");
+
+        assertThat(
+                response.content()
+                        .get(1)
+                        .userNickname()
+        ).isEqualTo("사용자2");
+
+        verify(userRepository)
+                .findAllById(
+                        Set.of(
+                                firstUserId,
+                                secondUserId
+                        )
+                );
+
+        verify(
+                userRepository,
+                never()
+        ).findById(any(UUID.class));
+    }
+
+    @Test
+    @DisplayName("탈퇴한 사용자가 작성한 기존 댓글도 작성자 정보와 함께 조회된다")
+    void findAllIncludesSoftDeletedUserInformation() {
+
+        // given
+        UUID reviewId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        CommentSearchRequest request =
+                new CommentSearchRequest(
+                        reviewId,
+                        "DESC",
+                        null,
+                        null,
+                        10
+                );
+
+        Comment comment =
+                new Comment(
+                        "탈퇴 전 작성한 댓글",
+                        userId,
+                        reviewId
+                );
+
+        User deletedUser =
+                mock(User.class);
+
+        when(deletedUser.getId())
+                .thenReturn(userId);
+
+        when(deletedUser.getNickname())
+                .thenReturn("탈퇴사용자");
+
+        when(
+                commentRepository.findAllByCursor(request)
+        ).thenReturn(
+                List.of(comment)
+        );
+
+        /*
+         * findAllById는 deletedAt 여부를 조건으로 걸지 않으므로
+         * 논리 삭제된 사용자도 반환할 수 있다.
+         */
+        when(
+                userRepository.findAllById(
+                        Set.of(userId)
+                )
+        ).thenReturn(
+                List.of(deletedUser)
+        );
+
+        when(
+                commentRepository.countAll(request)
+        ).thenReturn(1L);
+
+        // when
+        CommentListResponse response =
+                commentService.findAll(request);
+
+        // then
+        assertThat(response.content())
+                .hasSize(1);
+
+        assertThat(
+                response.content()
+                        .get(0)
+                        .userNickname()
+        ).isEqualTo("탈퇴사용자");
+
+        verify(userRepository)
+                .findAllById(
+                        Set.of(userId)
+                );
+
+        verify(
+                userRepository,
+                never()
+        ).findAllByIdInAndDeletedAtIsNull(
+                any()
+        );
     }
 
     @Test
@@ -819,7 +1076,8 @@ class CommentServiceImplTest {
     void findAllWithoutNextPage() {
 
         // given
-        UUID reviewId = UUID.randomUUID();
+        UUID reviewId =
+                UUID.randomUUID();
 
         CommentSearchRequest request =
                 new CommentSearchRequest(
@@ -862,73 +1120,12 @@ class CommentServiceImplTest {
 
         assertThat(response.nextAfter())
                 .isNull();
-    }
 
-    @Test
-    @DisplayName("작성자를 찾지 못해도 댓글 응답의 닉네임은 빈 문자열이다")
-    void responseWhenUserNotFound() {
-
-        // given
-        UUID userId = UUID.randomUUID();
-        UUID reviewId = UUID.randomUUID();
-        UUID reviewWriterId = UUID.randomUUID();
-
-        CommentCreateRequest request =
-                new CommentCreateRequest(
-                        userId,
-                        reviewId,
-                        "댓글"
-                );
-
-        User reviewWriter =
-                mock(User.class);
-
-        Review review =
-                mock(Review.class);
-
-        when(reviewWriter.getId())
-                .thenReturn(reviewWriterId);
-
-        when(review.getUser())
-                .thenReturn(reviewWriter);
-
-        when(
-                reviewRepository.findByIdAndDeletedAtIsNull(
-                        reviewId
-                )
-        ).thenReturn(
-                Optional.of(review)
+        verify(
+                userRepository,
+                never()
+        ).findAllById(
+                any()
         );
-
-        when(
-                commentRepository.save(
-                        any(Comment.class)
-                )
-        ).thenAnswer(
-                invocation ->
-                        invocation.getArgument(0)
-        );
-
-        when(
-                userRepository.findById(userId)
-        ).thenReturn(
-                Optional.empty()
-        );
-
-        // when
-        CommentResponse response =
-                commentService.create(request);
-
-        // then
-        assertThat(response.userNickname())
-                .isEmpty();
-
-        verify(notificationService)
-                .createNotification(
-                        reviewWriter,
-                        review,
-                        "회원님의 리뷰에 새로운 댓글이 등록되었습니다.",
-                        NotificationType.NEW_COMMENT
-                );
     }
 }
