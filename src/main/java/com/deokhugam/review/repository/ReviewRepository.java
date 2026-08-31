@@ -22,4 +22,6 @@ public interface ReviewRepository
 
     // 도서 물리 삭제 시 연관 리뷰 조회
     List<Review> findAllByBookId(UUID bookId);
+    // 유저가 작성한 리뷰 전체 조회를 위해 추가
+    List<Review> findAllByUserId(UUID userId);
 }

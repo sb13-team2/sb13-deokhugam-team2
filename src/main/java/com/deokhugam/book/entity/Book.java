@@ -6,6 +6,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -13,6 +15,19 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
+@Table(
+    name = "books",
+    indexes = {
+        @Index(
+            name = "idx_book_title_created_at",
+            columnList = "title, created_at"
+        ),
+        @Index(
+            name = "idx_book_published_date_created_at",
+            columnList = "published_date, created_at"
+        )
+    }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Book extends SoftDeleteEntity {

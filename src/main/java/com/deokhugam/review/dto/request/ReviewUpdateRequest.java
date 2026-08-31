@@ -1,10 +1,12 @@
 package com.deokhugam.review.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+@Schema(description = "수정할 리뷰 정보")
 public record ReviewUpdateRequest(
 
         @NotBlank(message = "리뷰 내용은 필수입니다.")

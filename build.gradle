@@ -72,12 +72,7 @@ tasks.named('jacocoTestCoverageVerification') {
 
     violationRules {
         rule {
-            element = 'PACKAGE'
-
-            // 패키지 구조 확정 후 덕후감 service 패키지로 지정
-            includes = [
-                    'com.deokhugam.*.service'
-            ]
+            element = 'BUNDLE'
 
             limit {
                 counter = 'INSTRUCTION'

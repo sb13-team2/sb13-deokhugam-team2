@@ -14,6 +14,7 @@ import com.deokhugam.notification.entity.Notification;
 import com.deokhugam.notification.entity.NotificationType;
 import com.deokhugam.notification.repository.NotificationRepository;
 import com.deokhugam.review.entity.Review;
+import com.deokhugam.review.repository.ReviewRepository;
 import com.deokhugam.user.entity.User;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,6 +36,9 @@ class NotificationServiceTest {
 
   @Mock
   private NotificationRepository notificationRepository;
+
+  @Mock
+  private ReviewRepository reviewRepository;
 
   @InjectMocks
   private NotificationService notificationService;
@@ -202,5 +206,42 @@ class NotificationServiceTest {
     assertThat(result.hasNext()).isTrue();
     assertThat(result.content()).hasSize(1);
     assertThat(result.nextCursor()).isNotNull();
+  }
+
+  @Test
+  @DisplayName("대시보드 탑 10 리뷰 ID 리스트를 받으면 다건의 알림이 생성 및 저장되어야 한다")
+  void createTopReviewNotifications_Success() {
+    // 1. given (가짜 데이터 준비)
+    // 테스트니까 10개 대신 2개의 리뷰 ID만 넘어왔다고 가정합니다.
+    UUID reviewId1 = UUID.randomUUID();
+    UUID reviewId2 = UUID.randomUUID();
+    List<UUID> topReviewIds = List.of(reviewId1, reviewId2);
+
+    // 가짜 유저와 가짜 리뷰 세팅 (Mockito 사용)
+    User mockUser = org.mockito.Mockito.mock(User.class);
+    Review mockReview1 = org.mockito.Mockito.mock(Review.class);
+    org.mockito.BDDMockito.given(mockReview1.getUser()).willReturn(mockUser);
+    Review mockReview2 = org.mockito.Mockito.mock(Review.class);
+    org.mockito.BDDMockito.given(mockReview2.getUser()).willReturn(mockUser);
+
+    org.mockito.BDDMockito.given(reviewRepository.findAllById(org.mockito.ArgumentMatchers.any()))
+        .willReturn(List.of(mockReview1, mockReview2));
+
+    // 2. when (실제 동작)
+    notificationService.createTopReviewNotifications(topReviewIds);
+
+    // 3. then (결과 검증)
+    // notificationRepository.saveAll() 에 전달된 List<Notification> 파라미터를 낚아채는 도구 준비
+    @SuppressWarnings("unchecked")
+    org.mockito.ArgumentCaptor<List<Notification>> captor = org.mockito.ArgumentCaptor.forClass(List.class);
+    //notificationRepository의 saveAll 메서드가 정확히 1번 호출되었는지 검증(verify)하며 값을 낚아채도록 합니다.
+    org.mockito.Mockito.verify(notificationRepository, org.mockito.Mockito.times(1)).saveAll(captor.capture());
+    // 낚아챈 알림 리스트 꺼내기
+    List<Notification> savedNotifications = captor.getValue();
+    // 검증 1: 낚아챈 알림 리스트의 개수는 우리가 준비한 가짜 리뷰 개수인 2개여야 합니다!
+    org.assertj.core.api.Assertions.assertThat(savedNotifications).hasSize(2);
+    // 검증 2: 만들어진 첫 번째 알림의 타입(Type)은 TOP_REVIEW 여야 합니다!
+    org.assertj.core.api.Assertions.assertThat(savedNotifications.get(0).getType())
+        .isEqualTo(NotificationType.TOP_REVIEW);
   }
 }

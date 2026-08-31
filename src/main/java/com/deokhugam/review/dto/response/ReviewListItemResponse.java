@@ -1,8 +1,11 @@
 package com.deokhugam.review.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Schema(name = "ReviewDto")
 public record ReviewListItemResponse(
         UUID id,
         UUID bookId,

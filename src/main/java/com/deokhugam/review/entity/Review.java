@@ -95,4 +95,9 @@ public class Review extends SoftDeleteEntity {
             this.likeCount--;
         }
     }
+    public void decreaseCommentCount() {
+        if (this.commentCount > 0) {
+            this.commentCount--;
+        }
+    }
 }
