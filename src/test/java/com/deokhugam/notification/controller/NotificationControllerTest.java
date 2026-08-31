@@ -34,7 +34,7 @@ class NotificationControllerTest {
     // when & then
     mockMvc.perform(patch("/api/notifications/read-all") // Swagger 주소로 맞춤 (다르면 수정 요망)
             .header("Deokhugam-Request-User-ID", userId.toString()))
-        .andExpect(status().isOk());
+        .andExpect(status().isNoContent());
 
     // Service 메서드가 1번 불렸는지 검증
     verify(notificationService).readAllNotification(userId);
@@ -61,7 +61,7 @@ class NotificationControllerTest {
     // when & then
     // GET /api/notification?cursor=...&size=10
     mockMvc.perform(get("/api/notifications")
-            .header("Deokhugam-Request-User-ID", userId.toString())
+            .param("userId", userId.toString())
             .param("after", after)
             .param("limit", String.valueOf(limit)))
         .andExpect(status().isOk());

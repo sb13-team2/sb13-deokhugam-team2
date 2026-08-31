@@ -4,13 +4,16 @@ import com.deokhugam.dashboard.batch.DashboardPeriodResolver.PeriodRange;
 import com.deokhugam.dashboard.batch.ReviewRankingAggregationRepository.ReviewAggregation;
 import com.deokhugam.dashboard.entity.PeriodType;
 import com.deokhugam.dashboard.entity.ReviewRanking;
+import com.deokhugam.dashboard.event.TopReviewRankedEvent;
 import com.deokhugam.dashboard.repository.ReviewRankingRepository;
 import com.deokhugam.dashboard.util.DashboardScoreCalculator;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +24,7 @@ public class ReviewRankingBatchService {
   private final DashboardPeriodResolver periodResolver;
   private final ReviewRankingAggregationRepository aggregationRepository;
   private final ReviewRankingRepository reviewRankingRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional
   public void generateAll(LocalDate baseDate) {
@@ -94,6 +98,17 @@ public class ReviewRankingBatchService {
     );
 
     reviewRankingRepository.saveAll(rankings);
+
+    List<UUID> top10ReviewIds = rankings.stream()
+        .filter(ranking -> ranking.getRanking() <= 10)
+        .map(ReviewRanking::getReviewId)
+        .toList();
+
+    if (!top10ReviewIds.isEmpty()) {
+      eventPublisher.publishEvent(
+          new TopReviewRankedEvent(top10ReviewIds, periodType)
+      );
+    }
   }
 
   private record ReviewCandidate(
