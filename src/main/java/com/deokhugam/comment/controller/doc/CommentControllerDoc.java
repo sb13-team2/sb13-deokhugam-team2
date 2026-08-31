@@ -10,13 +10,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-@Tag(name = "댓글 관리", description = "댓글 관련 API")
+@Tag(
+        name = "댓글 관리",
+        description = "댓글 관련 API"
+)
 public interface CommentControllerDoc {
 
     @Operation(
@@ -65,11 +69,16 @@ public interface CommentControllerDoc {
             @ApiResponse(
                     responseCode = "404",
                     description = "댓글을 찾을 수 없음"
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "서버 내부 오류"
             )
     })
     ResponseEntity<CommentResponse> update(
             @PathVariable UUID commentId,
-            @RequestHeader("Deokhugam-Request-User-ID") UUID requesterId,
+            @RequestHeader("Deokhugam-Request-User-ID")
+            UUID requesterId,
             @RequestBody CommentUpdateRequest request
     );
 
@@ -81,6 +90,10 @@ public interface CommentControllerDoc {
             @ApiResponse(
                     responseCode = "204",
                     description = "댓글 삭제 성공"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 요청 또는 요청 사용자 ID 헤더 누락"
             ),
             @ApiResponse(
                     responseCode = "403",
@@ -97,7 +110,8 @@ public interface CommentControllerDoc {
     })
     ResponseEntity<Void> delete(
             @PathVariable UUID commentId,
-            @RequestHeader("Deokhugam-Request-User-ID") UUID requesterId
+            @RequestHeader("Deokhugam-Request-User-ID")
+            UUID requesterId
     );
 
     @Operation(
@@ -112,9 +126,18 @@ public interface CommentControllerDoc {
             @ApiResponse(
                     responseCode = "400",
                     description = "잘못된 조회 조건"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "리뷰를 찾을 수 없음"
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "서버 내부 오류"
             )
     })
     ResponseEntity<CommentListResponse> findAll(
+            @ParameterObject
             @ModelAttribute CommentSearchRequest request
     );
 }
