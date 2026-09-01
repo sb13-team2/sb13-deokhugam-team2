@@ -254,7 +254,7 @@ public class BasicReviewService implements ReviewService {
             UUID requesterId
     ) {
         Review review = reviewRepository
-                .findByIdAndDeletedAtIsNull(reviewId)
+                .findByIdForUpdate(reviewId)
                 .orElseThrow(() ->
                         new ReviewNotFoundException(reviewId)
                 );

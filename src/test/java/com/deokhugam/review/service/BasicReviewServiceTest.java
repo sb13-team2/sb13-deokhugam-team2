@@ -585,7 +585,7 @@ class BasicReviewServiceTest {
         Book book = createBook(bookId);
         Review review = createReview(reviewId, author, book);
 
-        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+        given(reviewRepository.findByIdForUpdate(reviewId))
                 .willReturn(Optional.of(review));
 
         given(reviewLikeRepository.findByReviewIdAndUserId(
@@ -633,7 +633,7 @@ class BasicReviewServiceTest {
                 requester
         );
 
-        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+        given(reviewRepository.findByIdForUpdate(reviewId))
                 .willReturn(Optional.of(review));
 
         given(userRepository.findByIdAndDeletedAtIsNull(requesterId))
@@ -663,7 +663,7 @@ class BasicReviewServiceTest {
         UUID reviewId = UUID.randomUUID();
         UUID requesterId = UUID.randomUUID();
 
-        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+        given(reviewRepository.findByIdForUpdate(reviewId))
                 .willReturn(Optional.empty());
 
         assertThatThrownBy(() -> reviewService.toggleLike(
@@ -689,7 +689,7 @@ class BasicReviewServiceTest {
         Book book = createBook(bookId);
         Review review = createReview(reviewId, author, book);
 
-        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+        given(reviewRepository.findByIdForUpdate(reviewId))
                 .willReturn(Optional.of(review));
 
         given(userRepository.findByIdAndDeletedAtIsNull(requesterId))
@@ -989,7 +989,7 @@ class BasicReviewServiceTest {
                 book
         );
 
-        given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId))
+        given(reviewRepository.findByIdForUpdate(reviewId))
                 .willReturn(Optional.of(review));
 
         given(userRepository.findByIdAndDeletedAtIsNull(requesterId))

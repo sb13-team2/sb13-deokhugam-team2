@@ -244,38 +244,6 @@ public interface ReviewControllerDoc {
     );
 
     @Operation(
-            operationId = "permanentDeleteReview",
-            summary = "리뷰 물리 삭제",
-            description = "본인이 작성한 리뷰를 물리적으로 삭제합니다."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "리뷰 삭제 성공"),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "잘못된 요청 (요청자 ID 누락)"
-            ),
-            @ApiResponse(responseCode = "403", description = "리뷰 삭제 권한 없음"),
-            @ApiResponse(responseCode = "404", description = "리뷰 정보 없음"),
-            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
-    })
-    ResponseEntity<Void> hardDelete(
-            @Parameter(
-                    description = "리뷰 ID",
-                    required = true,
-                    example = "123e4567-e89b-12d3-a456-426614174000"
-            )
-            @PathVariable UUID reviewId,
-
-            @Parameter(
-                    description = "요청자 ID",
-                    required = true,
-                    example = "123e4567-e89b-12d3-a456-426614174000"
-            )
-            @RequestHeader("Deokhugam-Request-User-ID")
-            UUID requesterId
-    );
-
-    @Operation(
             operationId = "likeReview",
             summary = "리뷰 좋아요",
             description = "리뷰에 좋아요를 추가하거나 취소합니다."
