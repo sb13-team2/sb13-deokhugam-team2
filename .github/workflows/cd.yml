@@ -3,25 +3,72 @@ name: CD
 on:
   push:
     branches:
-      - develop
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deokhugam-production-deploy
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Build and deploy to Amazon ECS
+  test:
+    name: Test before deployment
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: deokhugam
+          POSTGRES_USER: deokhugam_user
+          POSTGRES_PASSWORD: deokhugam1234
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U deokhugam_user -d deokhugam"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/deokhugam
+      DB_USERNAME: deokhugam_user
+      DB_PASSWORD: deokhugam1234
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x gradlew
+
+      - name: Run tests and verify coverage
+        run: ./gradlew clean check --no-daemon
+
+  deploy:
+    name: Build and deploy to Amazon ECS
+    needs: test
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
