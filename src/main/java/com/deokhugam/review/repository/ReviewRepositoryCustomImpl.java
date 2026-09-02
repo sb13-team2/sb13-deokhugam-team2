@@ -1,5 +1,6 @@
 package com.deokhugam.review.repository;
 
+import com.deokhugam.review.dto.ReviewCursor;
 import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.entity.Review;
 import jakarta.persistence.EntityManager;
@@ -41,23 +42,12 @@ public class ReviewRepositoryCustomImpl
                         && !request.cursor().isBlank();
 
         if (hasCursor) {
-            jpql.append(" AND (")
-                    .append(sortField)
-                    .append(" ")
-                    .append(operator)
-                    .append(" :cursor");
-
-            if (request.orderBy().equals("rating")
-                    && request.after() != null) {
-                jpql.append(" OR (")
-                        .append(sortField)
-                        .append(" = :cursor")
-                        .append(" AND r.createdAt ")
-                        .append(operator)
-                        .append(" :after)");
-            }
-
-            jpql.append(")");
+            appendCursorCondition(
+                    jpql,
+                    request.orderBy(),
+                    sortField,
+                    operator
+            );
         }
 
         appendOrderBy(
@@ -75,12 +65,19 @@ public class ReviewRepositoryCustomImpl
         setSearchParameters(query, request);
 
         if (hasCursor) {
+            ReviewCursor reviewCursor =
+                    ReviewCursor.decode(request.cursor());
+
             query.setParameter(
                     "cursor",
                     parseCursor(
                             request.orderBy(),
-                            request.cursor()
+                            reviewCursor.sortValue()
                     )
+            );
+            query.setParameter(
+                    "cursorReviewId",
+                    reviewCursor.reviewId()
             );
 
             if (request.orderBy().equals("rating")
@@ -95,6 +92,44 @@ public class ReviewRepositoryCustomImpl
         query.setMaxResults(request.limit() + 1);
 
         return query.getResultList();
+    }
+
+    private void appendCursorCondition(
+            StringBuilder jpql,
+            String orderBy,
+            String sortField,
+            String operator
+    ) {
+        jpql.append(" AND (")
+                .append(sortField)
+                .append(" ")
+                .append(operator)
+                .append(" :cursor");
+
+        if (orderBy.equals("rating")) {
+            jpql.append(" OR (")
+                    .append(sortField)
+                    .append(" = :cursor")
+                    .append(" AND r.createdAt ")
+                    .append(operator)
+                    .append(" :after)")
+                    .append(" OR (")
+                    .append(sortField)
+                    .append(" = :cursor")
+                    .append(" AND r.createdAt = :after")
+                    .append(" AND r.id ")
+                    .append(operator)
+                    .append(" :cursorReviewId)");
+        } else {
+            jpql.append(" OR (")
+                    .append(sortField)
+                    .append(" = :cursor")
+                    .append(" AND r.id ")
+                    .append(operator)
+                    .append(" :cursorReviewId)");
+        }
+
+        jpql.append(")");
     }
 
     @Override

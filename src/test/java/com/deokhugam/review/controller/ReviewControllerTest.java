@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.deokhugam.global.config.SecurityConfig;
+import com.deokhugam.review.dto.ReviewCursor;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
@@ -421,13 +422,23 @@ class ReviewControllerTest {
         LocalDateTime createdAt =
                 LocalDateTime.of(2026, 8, 21, 10, 0);
 
+        String requestCursor = ReviewCursor.encode(
+                5,
+                UUID.randomUUID()
+        );
+
+        String nextCursor = ReviewCursor.encode(
+                4,
+                reviewId
+        );
+
         ReviewSearchRequest request = new ReviewSearchRequest(
                 authorId,
                 bookId,
                 "좋은",
                 "rating",
                 "DESC",
-                "5",
+                requestCursor,
                 createdAt,
                 10
         );
@@ -450,7 +461,7 @@ class ReviewControllerTest {
 
         ReviewListResponse response = new ReviewListResponse(
                 List.of(review),
-                "4",
+                nextCursor,
                 createdAt,
                 1,
                 2L,
@@ -472,7 +483,7 @@ class ReviewControllerTest {
                         .param("keyword", "좋은")
                         .param("orderBy", "rating")
                         .param("direction", "DESC")
-                        .param("cursor", "5")
+                        .param("cursor", requestCursor)
                         .param("after", createdAt.toString())
                         .param("limit", "10"))
                 .andExpect(status().isOk())
@@ -491,7 +502,8 @@ class ReviewControllerTest {
                 .andExpect(jsonPath("$.content[0].rating").value(4))
                 .andExpect(jsonPath("$.content[0].likedByMe")
                         .value(true))
-                .andExpect(jsonPath("$.nextCursor").value("4"))
+                .andExpect(jsonPath("$.nextCursor")
+                        .value(nextCursor))
                 .andExpect(jsonPath("$.nextAfter")
                         .value("2026-08-21T10:00:00"))
                 .andExpect(jsonPath("$.size").value(1))
@@ -566,13 +578,18 @@ class ReviewControllerTest {
             throws Exception {
         UUID requesterId = UUID.randomUUID();
 
+        String cursor = ReviewCursor.encode(
+                4,
+                UUID.randomUUID()
+        );
+
         mockMvc.perform(get("/api/reviews")
                         .header(
                                 REQUEST_USER_ID_HEADER,
                                 requesterId
                         )
                         .param("orderBy", "rating")
-                        .param("cursor", "4"))
+                        .param("cursor", cursor))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code")
                         .value("INVALID_INPUT_VALUE"));

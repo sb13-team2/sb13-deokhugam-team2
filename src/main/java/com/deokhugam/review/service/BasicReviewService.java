@@ -10,6 +10,7 @@ import com.deokhugam.global.storage.Storage;
 import com.deokhugam.notification.entity.NotificationType;
 import com.deokhugam.notification.repository.NotificationRepository;
 import com.deokhugam.notification.service.NotificationService;
+import com.deokhugam.review.dto.ReviewCursor;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
@@ -352,11 +353,18 @@ public class BasicReviewService implements ReviewService {
             Review review,
             String orderBy
     ) {
+        Object sortValue;
+
         if ("rating".equals(orderBy)) {
-            return review.getRating().toString();
+            sortValue = review.getRating();
+        } else {
+            sortValue = review.getCreatedAt();
         }
 
-        return review.getCreatedAt().toString();
+        return ReviewCursor.encode(
+                sortValue,
+                review.getId()
+        );
     }
 
     private ReviewDetailResponse toResponse(

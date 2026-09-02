@@ -16,6 +16,7 @@ import com.deokhugam.global.storage.Storage;
 import com.deokhugam.notification.entity.NotificationType;
 import com.deokhugam.notification.repository.NotificationRepository;
 import com.deokhugam.notification.service.NotificationService;
+import com.deokhugam.review.dto.ReviewCursor;
 import com.deokhugam.review.dto.request.ReviewCreateRequest;
 import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.dto.request.ReviewUpdateRequest;
@@ -813,7 +814,12 @@ class BasicReviewServiceTest {
         assertThat(response.size()).isEqualTo(2);
         assertThat(response.totalElements()).isEqualTo(3L);
         assertThat(response.hasNext()).isTrue();
-        assertThat(response.nextCursor()).isEqualTo("4");
+
+        ReviewCursor nextCursor =
+                ReviewCursor.decode(response.nextCursor());
+
+        assertThat(nextCursor.sortValue()).isEqualTo("4");
+        assertThat(nextCursor.reviewId()).isEqualTo(secondReviewId);
         assertThat(response.nextAfter()).isEqualTo(secondCreatedAt);
 
         assertThat(response.content().get(0).id())

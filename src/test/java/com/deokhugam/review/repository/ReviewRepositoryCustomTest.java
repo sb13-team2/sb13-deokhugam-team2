@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.deokhugam.book.entity.Book;
 import com.deokhugam.book.repository.BookRepository;
 import com.deokhugam.global.config.JpaConfig;
+import com.deokhugam.review.dto.ReviewCursor;
 import com.deokhugam.review.dto.request.ReviewSearchRequest;
 import com.deokhugam.review.entity.Review;
 import com.deokhugam.user.entity.User;
@@ -144,7 +145,10 @@ class ReviewRepositoryCustomTest {
         Book book3 = saveBook("도서 3");
 
         saveReview(user1, book1, "5점 리뷰", 5);
-        saveReview(user2, book2, "4점 리뷰", 4);
+
+        Review cursorReview =
+                saveReview(user2, book2, "4점 리뷰", 4);
+
         Review ratingThreeReview =
                 saveReview(user3, book3, "3점 리뷰", 3);
 
@@ -154,8 +158,11 @@ class ReviewRepositoryCustomTest {
                 null,
                 "rating",
                 "DESC",
-                "4",
-                null,
+                ReviewCursor.encode(
+                        cursorReview.getRating(),
+                        cursorReview.getId()
+                ),
+                cursorReview.getCreatedAt(),
                 50
         );
 
@@ -204,12 +211,14 @@ class ReviewRepositoryCustomTest {
 
         List<Review> result =
                 reviewRepository.findAllByCursor(request);
+
         long totalElements =
                 reviewRepository.countAll(request);
 
         assertThat(result)
                 .extracting(Review::getId)
                 .containsExactly(activeReview.getId());
+
         assertThat(totalElements).isEqualTo(1L);
     }
 
@@ -229,12 +238,14 @@ class ReviewRepositoryCustomTest {
                 "최신 리뷰",
                 4
         );
+
         Review cursorReview = saveReview(
                 cursorUser,
                 cursorBook,
                 "커서 리뷰",
                 4
         );
+
         Review oldestReview = saveReview(
                 oldestUser,
                 oldestBook,
@@ -244,8 +255,10 @@ class ReviewRepositoryCustomTest {
 
         LocalDateTime newestCreatedAt =
                 LocalDateTime.of(2026, 8, 21, 11, 0);
+
         LocalDateTime cursorCreatedAt =
                 LocalDateTime.of(2026, 8, 21, 10, 0);
+
         LocalDateTime oldestCreatedAt =
                 LocalDateTime.of(2026, 8, 21, 9, 0);
 
@@ -253,10 +266,12 @@ class ReviewRepositoryCustomTest {
                 newestReview.getId(),
                 newestCreatedAt
         );
+
         updateCreatedAt(
                 cursorReview.getId(),
                 cursorCreatedAt
         );
+
         updateCreatedAt(
                 oldestReview.getId(),
                 oldestCreatedAt
@@ -270,7 +285,10 @@ class ReviewRepositoryCustomTest {
                 null,
                 "rating",
                 "DESC",
-                "4",
+                ReviewCursor.encode(
+                        cursorReview.getRating(),
+                        cursorReview.getId()
+                ),
                 cursorCreatedAt,
                 50
         );
@@ -281,6 +299,144 @@ class ReviewRepositoryCustomTest {
         assertThat(result)
                 .extracting(Review::getId)
                 .containsExactly(oldestReview.getId());
+    }
+
+    @Test
+    void 생성일이_같아도_리뷰_ID_커서_다음의_리뷰를_누락하지_않는다() {
+        User user1 = saveUser("동시 작성자 1");
+        User user2 = saveUser("동시 작성자 2");
+        User user3 = saveUser("동시 작성자 3");
+
+        Book book1 = saveBook("동시 도서 1");
+        Book book2 = saveBook("동시 도서 2");
+        Book book3 = saveBook("동시 도서 3");
+
+        Review review1 =
+                saveReview(user1, book1, "동시 리뷰 1", 5);
+
+        Review review2 =
+                saveReview(user2, book2, "동시 리뷰 2", 4);
+
+        Review review3 =
+                saveReview(user3, book3, "동시 리뷰 3", 3);
+
+        LocalDateTime sameCreatedAt =
+                LocalDateTime.of(2026, 8, 21, 10, 0);
+
+        updateCreatedAt(review1.getId(), sameCreatedAt);
+        updateCreatedAt(review2.getId(), sameCreatedAt);
+        updateCreatedAt(review3.getId(), sameCreatedAt);
+
+        entityManager.clear();
+
+        ReviewSearchRequest initialRequest = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "createdAt",
+                "DESC",
+                null,
+                null,
+                50
+        );
+
+        List<Review> orderedReviews =
+                reviewRepository.findAllByCursor(initialRequest);
+
+        Review cursorReview = orderedReviews.get(0);
+
+        ReviewSearchRequest cursorRequest = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "createdAt",
+                "DESC",
+                ReviewCursor.encode(
+                        cursorReview.getCreatedAt(),
+                        cursorReview.getId()
+                ),
+                cursorReview.getCreatedAt(),
+                50
+        );
+
+        List<Review> result =
+                reviewRepository.findAllByCursor(cursorRequest);
+
+        assertThat(result)
+                .extracting(Review::getId)
+                .containsExactly(
+                        orderedReviews.get(1).getId(),
+                        orderedReviews.get(2).getId()
+                );
+    }
+
+    @Test
+    void 평점과_생성일이_같아도_리뷰_ID_커서_다음의_리뷰를_누락하지_않는다() {
+        User user1 = saveUser("동점 작성자 1");
+        User user2 = saveUser("동점 작성자 2");
+        User user3 = saveUser("동점 작성자 3");
+
+        Book book1 = saveBook("동점 도서 1");
+        Book book2 = saveBook("동점 도서 2");
+        Book book3 = saveBook("동점 도서 3");
+
+        Review review1 =
+                saveReview(user1, book1, "동점 리뷰 1", 4);
+
+        Review review2 =
+                saveReview(user2, book2, "동점 리뷰 2", 4);
+
+        Review review3 =
+                saveReview(user3, book3, "동점 리뷰 3", 4);
+
+        LocalDateTime sameCreatedAt =
+                LocalDateTime.of(2026, 8, 21, 10, 0);
+
+        updateCreatedAt(review1.getId(), sameCreatedAt);
+        updateCreatedAt(review2.getId(), sameCreatedAt);
+        updateCreatedAt(review3.getId(), sameCreatedAt);
+
+        entityManager.clear();
+
+        ReviewSearchRequest initialRequest = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "rating",
+                "DESC",
+                null,
+                null,
+                50
+        );
+
+        List<Review> orderedReviews =
+                reviewRepository.findAllByCursor(initialRequest);
+
+        Review cursorReview = orderedReviews.get(0);
+
+        ReviewSearchRequest cursorRequest = new ReviewSearchRequest(
+                null,
+                null,
+                null,
+                "rating",
+                "DESC",
+                ReviewCursor.encode(
+                        cursorReview.getRating(),
+                        cursorReview.getId()
+                ),
+                cursorReview.getCreatedAt(),
+                50
+        );
+
+        List<Review> result =
+                reviewRepository.findAllByCursor(cursorRequest);
+
+        assertThat(result)
+                .extracting(Review::getId)
+                .containsExactly(
+                        orderedReviews.get(1).getId(),
+                        orderedReviews.get(2).getId()
+                );
     }
 
     private void updateCreatedAt(

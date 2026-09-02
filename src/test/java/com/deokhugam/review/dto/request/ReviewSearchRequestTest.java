@@ -2,11 +2,11 @@ package com.deokhugam.review.dto.request;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.deokhugam.review.dto.ReviewCursor;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
-
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
@@ -56,7 +56,7 @@ class ReviewSearchRequestTest {
                 "좋은 책",
                 "rating",
                 "ASC",
-                "4",
+                ReviewCursor.encode(4, UUID.randomUUID()),
                 LocalDateTime.of(2026, 8, 21, 10, 0),
                 20
         );
@@ -209,7 +209,7 @@ class ReviewSearchRequestTest {
                 null,
                 "rating",
                 "DESC",
-                "4",
+                ReviewCursor.encode(4, UUID.randomUUID()),
                 null,
                 20
         );

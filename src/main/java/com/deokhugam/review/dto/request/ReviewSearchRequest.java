@@ -1,11 +1,11 @@
 package com.deokhugam.review.dto.request;
 
+import com.deokhugam.review.dto.ReviewCursor;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -64,21 +64,20 @@ public record ReviewSearchRequest(
         }
 
         try {
+            ReviewCursor reviewCursor = ReviewCursor.decode(cursor);
+
             if ("rating".equals(orderBy)) {
-                Integer.parseInt(cursor);
+                Integer.parseInt(reviewCursor.sortValue());
                 return true;
             }
 
             if ("createdAt".equals(orderBy)) {
-                LocalDateTime.parse(cursor);
+                LocalDateTime.parse(reviewCursor.sortValue());
                 return true;
             }
 
             return true;
-        } catch (
-                NumberFormatException
-                | DateTimeParseException exception
-        ) {
+        } catch (RuntimeException exception) {
             return false;
         }
     }
