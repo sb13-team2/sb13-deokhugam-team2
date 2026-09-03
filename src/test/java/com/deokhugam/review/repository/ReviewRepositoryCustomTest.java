@@ -142,13 +142,32 @@ class ReviewRepositoryCustomTest {
 
         Book book = saveBook("커서 테스트 도서");
 
-        saveReview(user1, book, "5점 리뷰", 5);
+        Review ratingFiveReview =
+                saveReview(user1, book, "5점 리뷰", 5);
 
         Review cursorReview =
                 saveReview(user2, book, "4점 리뷰", 4);
 
         Review ratingThreeReview =
                 saveReview(user3, book, "3점 리뷰", 3);
+
+        LocalDateTime fixedCreatedAt =
+                LocalDateTime.of(2026, 8, 21, 10, 0);
+
+        updateCreatedAt(
+                ratingFiveReview.getId(),
+                fixedCreatedAt
+        );
+        updateCreatedAt(
+                cursorReview.getId(),
+                fixedCreatedAt
+        );
+        updateCreatedAt(
+                ratingThreeReview.getId(),
+                fixedCreatedAt
+        );
+
+        entityManager.clear();
 
         ReviewSearchRequest request = new ReviewSearchRequest(
                 null,
@@ -160,7 +179,7 @@ class ReviewRepositoryCustomTest {
                         cursorReview.getRating(),
                         cursorReview.getId()
                 ),
-                cursorReview.getCreatedAt(),
+                fixedCreatedAt,
                 50
         );
 
